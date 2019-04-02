@@ -8,4 +8,4 @@ install:
 script:
   - pytest
   - pycodestyle --max-line-length=80 --count --statistics .
-  - mypy toolbox/ --disallow-incomplete-defs
+  - mypy natural_selection/ --disallow-incomplete-defs
