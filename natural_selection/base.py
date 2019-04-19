@@ -1,22 +1,70 @@
 """
 Basic units
 """
-from abc import ABC, abstractmethod
+from abc import ABC
+from abc import abstractmethod
+from dataclasses import dataclass
+from dataclasses import field
 from random import randint
-from typing import Tuple
+from typing import List, Optional, Tuple
 
 import tensorflow as tf
 from tensorflow import keras
 
 
+@dataclass
+class Vertex(object):
+    out_bound_edges: List['Operation'] = field(default_factory=list)
+    collected: List[tf.Tensor] = field(default_factory=list)
+    order: int = 0
+
+    def reset(self) -> None:
+        self.collected = []
+
+    def collect(self, x: tf.Tensor) -> None:
+        self.collected.append(x)
+
+    def aggregate(self) -> tf.Tensor:
+        if not self.collected:
+            # Should throw error
+            pass
+        elif len(self.collected) == 1:
+            return self.collected[0]
+        else:
+            return keras.layers.concatenate(self.collected)
+
+    def submit(self) -> None:
+        aggregated = self.aggregate()
+        for out_edge in self.out_bound_edges:
+            out_edge.build(aggregated)
+
+
 class Operation(ABC):
 
     def __init__(self) -> None:
-        pass
+        self._source_vertex: Optional[Vertex] = None
+        self._end_vertex: Optional[Vertex] = None
 
-    @abstractmethod
-    def output_shape(self, input_shape: tf.TensorShape) -> tf.TensorShape:
-        pass
+    @property
+    def source_vertex(self) -> Optional[Vertex]:
+        return self._source_vertex
+
+    @source_vertex.setter
+    def source_vertex(self, vertex: Vertex) -> None:
+        self._source_vertex = vertex
+
+    @property
+    def end_vertex(self) -> Optional[Vertex]:
+        return self._end_vertex
+
+    @end_vertex.setter
+    def end_vertex(self, vertex: Vertex) -> None:
+        self._end_vertex = vertex
+
+    def submit(self, x: tf.Tensor) -> None:
+        processed = self.build(x)
+        if self._end_vertex:
+            self._end_vertex.collect(processed)
 
     @abstractmethod
     def mutate(self) -> bool:
@@ -33,9 +81,6 @@ class Operation(ABC):
 
 
 class IdentityOperation(Operation):
-
-    def output_shape(self, input_shape: tf.TensorShape) -> tf.TensorShape:
-        return input_shape
 
     def mutate(self) -> bool:
         return False
@@ -55,9 +100,6 @@ class _LayerWrapperMutableChannels(Operation):
         self.out_channel_range = out_channel_range
         self._layer: keras.layers.Layer = None
         self.mutate()
-
-    def output_shape(self, input_shape: tf.TensorShape) -> tf.TensorShape:
-        return self._layer.compute_output_shape(input_shape)
 
     def mutate(self) -> bool:
         out_channels = randint(*self.out_channel_range)
@@ -81,9 +123,6 @@ class _LayerWrapperImmutableChannels(Operation):
     def __init__(self) -> None:
         super().__init__()
         self._layer: keras.layers.Layer = self.build_layer()
-
-    def output_shape(self, input_shape: tf.TensorShape) -> tf.TensorShape:
-        return self._layer.compute_output_shape(input_shape)
 
     def mutate(self) -> bool:
         return False
