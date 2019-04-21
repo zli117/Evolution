@@ -2,10 +2,9 @@
 
 """
 from enum import Enum
-from queue import Queue
-from random import choice
-from typing import Tuple, List
+from typing import Tuple, List, Set, Dict
 
+import numpy as np
 import tensorflow as tf
 
 from natural_selection.base import IdentityOperation
@@ -21,49 +20,122 @@ class MutationTypes(Enum):
     MUTATE_EDGE = 4,
 
 
-class Initialization(Enum):
-    IDENTITY = 0,
-    RANDOM_FROM_OPS = 1,
+class ComplexOperation(Operation):
 
-
-class HigherLevelOperation(Operation):
-
-    def __init__(self, operations: Tuple[Operation],
-                 initialize: Initialization = Initialization.IDENTITY) -> None:
+    def __init__(self, available_operations: Tuple[Operation],
+                 initialize_with_identity: bool = True) -> None:
         super().__init__()
-        self.operations = operations
+        self.available_operations = available_operations
         self.input_vertex = Vertex()
         self.output_vertex = Vertex()
-        if initialize == Initialization.IDENTITY:
+        self.inuse_operations: Set[Operation] = set()
+
+        if initialize_with_identity:
             edge: Operation = IdentityOperation()
         else:
-            edge = choice(self.operations)
+            edge, = np.random.choice(self.available_operations, size=1)
+        self.inuse_operations.add(edge)
         self.input_vertex.out_bound_edges.append(edge)
-        self.vertices: List[Vertex] = [self.input_vertex, self.output_vertex]
-        self._compute_tiers()
+        self.vertices_topo_order: List[Vertex] = [self.input_vertex,
+                                                  self.output_vertex]
+        self._compute_topo_order()
 
-    def _compute_tiers(self) -> None:
-        # Basically BFS
-        bfs_queue: Queue = Queue()
-        self.input_vertex.tier = 0
-        bfs_queue.put(self.input_vertex)
-        while not bfs_queue.empty():
-            vertex: Vertex = bfs_queue.get()
-            for out_edge in vertex.out_bound_edges:
-                neighbor = out_edge.end_vertex
-                if neighbor:
-                    neighbor.tier = vertex.tier + 1
-                    bfs_queue.put(neighbor)
+    def _topo_sort_recursion(self, current: Vertex,
+                             vertex_list: List[Vertex],
+                             accessing_set: Set[Vertex],
+                             finished_status: Dict[Vertex, bool]) -> bool:
+        """
 
-    def output_shape(self, input_shape: tf.TensorShape) -> tf.TensorShape:
+        Args:
+            current:
+            vertex_list:
+            accessing_set:
+            finished_status:
+
+        Returns:
+
+        """
+        if current in accessing_set:
+            # Error. Circle
+            return False
+        if current in finished_status:
+            return finished_status[current]
+        can_reach_output = current == self.output_vertex
+        for out_edge in current.out_bound_edges:
+            if out_edge.end_vertex:
+                can_reach_output |= self._topo_sort_recursion(
+                    out_edge.end_vertex, vertex_list, accessing_set,
+                    finished_status)
+        finished_status[current] = can_reach_output
+        accessing_set.remove(current)
+        if can_reach_output:
+            vertex_list.append(current)
+        return can_reach_output
+
+    def _compute_topo_order(self) -> None:
+        vertex_list: List[Vertex] = []
+        accessing_set: Set[Vertex] = set()
+        finished_status: Dict[Vertex, bool] = dict()
+        self._topo_sort_recursion(self.input_vertex, vertex_list,
+                                  accessing_set, finished_status)
+        self.vertices_topo_order = vertex_list
+        for order, vertex in enumerate(vertex_list):
+            vertex.order = order
+
+    def _mutation_add_edge(self) -> None:
+        vertex1, vertex2 = np.random.choice(self.vertices_topo_order, size=2,
+                                            replace=False)
+        # Never have backward edge, to prevent cycle
+        if vertex1.order < vertex2.order:
+            from_vertex: Vertex = vertex2
+            to_vertex: Vertex = vertex1
+        else:
+            from_vertex = vertex1
+            to_vertex = vertex2
+
+        edge: Operation = np.random.choice(self.available_operations, size=1)[0]
+        from_vertex.out_bound_edges.append(edge)
+        edge.end_vertex = to_vertex
+        self.inuse_operations.add(edge)
+
+    def _mutation_mutate_edge(self) -> None:
+        pass
+
+    def _mutation_remove_edge(self) -> None:
+        pass
+
+    def _mutation_add_node(self) -> None:
+        pass
+
+    def _mutation_remove_node(self) -> None:
         pass
 
     def mutate(self) -> bool:
-        pass
+        mutation_type = choice(list(MutationTypes))
+        if mutation_type == MutationTypes.ADD_EDGE:
+            self._mutation_add_edge()
+        elif mutation_type == MutationTypes.MUTATE_EDGE:
+            self._mutation_mutate_edge()
+        elif mutation_type == MutationTypes.REMOVE_EDGE:
+            self._mutation_remove_edge()
+        elif mutation_type == MutationTypes.ADD_NODE:
+            self._mutation_add_node()
+        elif mutation_type == MutationTypes.REMOVE_NODE:
+            self._mutation_remove_node()
+
+        return True
 
     def build(self, x: tf.Tensor) -> tf.Tensor:
-        pass
+        for vertex in self.vertices_topo_order:
+            vertex.reset()
+        self.input_vertex.collect(x)
+        for vertex in reversed(self.vertices_topo_order):
+            vertex.submit()
+        return self.output_vertex.aggregate()
 
     @property
     def layers_below(self) -> int:
-        pass
+        max_layers = 1
+        for operation in self.inuse_operations:
+            max_layers = max(max_layers, operation.layers_below)
+        return max_layers + 1
