@@ -97,6 +97,7 @@ class ComplexOperation(Operation):
         from_vertex.out_bound_edges.append(edge)
         edge.end_vertex = to_vertex
         self.inuse_operations.add(edge)
+        self._compute_topo_order()
 
     def _mutation_mutate_edge(self) -> None:
         pass
@@ -111,7 +112,7 @@ class ComplexOperation(Operation):
         pass
 
     def mutate(self) -> bool:
-        mutation_type = choice(list(MutationTypes))
+        mutation_type, = np.random.choice(list(MutationTypes), size=1)
         if mutation_type == MutationTypes.ADD_EDGE:
             self._mutation_add_edge()
         elif mutation_type == MutationTypes.MUTATE_EDGE:
