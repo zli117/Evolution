@@ -73,6 +73,13 @@ class ComplexOperation(Operation):
         return can_reach_output
 
     def _compute_topo_order(self) -> None:
+        """
+        Sort the vertices in topological order. Maintains the invariant that
+        vertices_topo_order contains vertices sorted in topological order.
+
+        Returns:
+            None
+        """
         vertex_list: List[Vertex] = []
         accessing_set: Set[Vertex] = set()
         finished_status: Dict[Vertex, bool] = dict()
