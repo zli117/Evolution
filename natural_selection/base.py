@@ -168,13 +168,13 @@ class DepthwiseConv2D(_LayerWrapperImmutableChannels):
 class MaxPool2D(_LayerWrapperImmutableChannels):
 
     def build_layer(self) -> keras.layers.Layer:
-        return keras.layers.MaxPool2D(pool_size=3)
+        return keras.layers.MaxPool2D(pool_size=3, padding='same')
 
 
 class AvePool2D(_LayerWrapperImmutableChannels):
 
     def build_layer(self) -> keras.layers.Layer:
-        return keras.layers.AveragePooling2D(pool_size=3)
+        return keras.layers.AveragePooling2D(pool_size=3, padding='same')
 
 
 class BatchNorm(_LayerWrapperImmutableChannels):
