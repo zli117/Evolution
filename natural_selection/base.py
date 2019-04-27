@@ -38,6 +38,12 @@ class Vertex(object):
         for out_edge in self.out_bound_edges:
             out_edge.build(aggregated)
 
+    def remove_edge(self, edge: 'Operation') -> bool:
+        if edge in self.out_bound_edges:
+            self.out_bound_edges.remove(edge)
+            return True
+        return False
+
 
 class Operation(ABC):
 

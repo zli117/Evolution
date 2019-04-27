@@ -107,7 +107,17 @@ class ComplexOperation(Operation):
         self._compute_topo_order()
 
     def _mutation_mutate_edge(self) -> None:
-        pass
+        while True:
+            vertex, = np.random.choice(self.vertices_topo_order, size=1)
+            if vertex.out_bound_edges:
+                edge, = np.random.choice(vertex.out_bound_edges, size=1)
+                vertex.remove_edge(edge)
+                new_edge: Operation = np.random.choice(
+                    self.available_operations, size=1)[0]
+                new_edge.end_vertex = edge.end_vertex
+                edge.end_vertex = None
+                vertex.out_bound_edges.append(new_edge)
+                break
 
     def _mutation_remove_edge(self) -> None:
         pass
