@@ -3,8 +3,6 @@ Basic units
 """
 from abc import ABC
 from abc import abstractmethod
-from dataclasses import dataclass
-from dataclasses import field
 from random import randint
 from typing import List, Optional, Tuple
 
@@ -12,11 +10,11 @@ import tensorflow as tf
 from tensorflow import keras
 
 
-@dataclass
 class Vertex(object):
-    out_bound_edges: List['Operation'] = field(default_factory=list)
-    collected: List[tf.Tensor] = field(default_factory=list)
-    order: int = 0
+    def __init__(self):
+        self.out_bound_edges: List['Operation'] = []
+        self.collected: List[tf.Tensor] = []
+        self.order: int = 0
 
     def reset(self) -> None:
         self.collected = []
@@ -80,8 +78,8 @@ class Operation(ABC):
     def build(self, x: tf.Tensor) -> tf.Tensor:
         pass
 
-    @abstractmethod
     @property
+    @abstractmethod
     def layers_below(self) -> int:
         pass
 

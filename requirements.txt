@@ -3,4 +3,5 @@ pytest-cov==2.6.1
 pycodestyle==2.5.0
 mypy==0.670
 tensorflow
+pytest-mock==1.10.4
 numpy

@@ -39,7 +39,7 @@ class ComplexOperation(Operation):
     edge, when the edge is in the graph
     """
 
-    def __init__(self, available_operations: Tuple[Operation],
+    def __init__(self, available_operations: Tuple[Operation, ...],
                  initialize_with_identity: bool = True) -> None:
         super().__init__()
         self.available_operations = available_operations
@@ -53,14 +53,15 @@ class ComplexOperation(Operation):
             edge, = np.random.choice(self.available_operations, size=1)
         self.inuse_operations.add(edge)
         self.input_vertex.out_bound_edges.append(edge)
+        edge.end_vertex = self.output_vertex
         self.vertices_topo_order: List[Vertex] = [self.output_vertex,
                                                   self.input_vertex]
-        self._compute_topo_order()
+        self.sort_vertices()
 
     def _topo_sort_recursion(self, current: Vertex,
                              vertex_list: List[Vertex],
-                             accessing_set: Set[Vertex],
-                             finished_status: Dict[Vertex, bool]) -> bool:
+                             accessing_set: Set[int],
+                             finished_status: Dict[int, bool]) -> bool:
         """
 
         Args:
@@ -72,24 +73,36 @@ class ComplexOperation(Operation):
         Returns:
 
         """
-        if current in accessing_set:
+        current_ref = id(current)
+        if current_ref in accessing_set:
             # Error. Circle
             return False
-        if current in finished_status:
-            return finished_status[current]
-        can_reach_output = current == self.output_vertex
+        if current_ref in finished_status:
+            return finished_status[current_ref]
+        accessing_set.add(current_ref)
+        to_remove: List[Operation] = []
         for out_edge in current.out_bound_edges:
             if out_edge.end_vertex:
-                can_reach_output |= self._topo_sort_recursion(
-                    out_edge.end_vertex, vertex_list, accessing_set,
-                    finished_status)
-        finished_status[current] = can_reach_output
-        accessing_set.remove(current)
+                # If can't reach output, the vertex will be removed, as well
+                # as the edge to it.
+                if not self._topo_sort_recursion(out_edge.end_vertex,
+                                                 vertex_list, accessing_set,
+                                                 finished_status):
+                    to_remove.append(out_edge)
+        can_reach_output = (current is self.output_vertex
+                            or len(to_remove) != len(current.out_bound_edges))
+        finished_status[current_ref] = can_reach_output
+        accessing_set.remove(current_ref)
+
+        for edge in to_remove:
+            current.out_bound_edges.remove(edge)
+            edge.end_vertex = None
+
         if can_reach_output:
             vertex_list.append(current)
         return can_reach_output
 
-    def _compute_topo_order(self) -> None:
+    def sort_vertices(self) -> None:
         """
         Sort the vertices in topological order. Maintains the invariant that
         vertices_topo_order contains vertices sorted in topological order.
@@ -98,15 +111,15 @@ class ComplexOperation(Operation):
             None
         """
         vertex_list: List[Vertex] = []
-        accessing_set: Set[Vertex] = set()
-        finished_status: Dict[Vertex, bool] = dict()
+        accessing_set: Set[int] = set()
+        finished_status: Dict[int, bool] = dict()
         self._topo_sort_recursion(self.input_vertex, vertex_list,
                                   accessing_set, finished_status)
         self.vertices_topo_order = vertex_list
         for order, vertex in enumerate(vertex_list):
             vertex.order = order
 
-    def _mutation_add_edge(self) -> None:
+    def mutation_add_edge(self) -> None:
         vertex1, vertex2 = np.random.choice(self.vertices_topo_order, size=2,
                                             replace=False)
         # Never have backward edge, to prevent cycle
@@ -117,9 +130,9 @@ class ComplexOperation(Operation):
         from_vertex.out_bound_edges.append(edge)
         edge.end_vertex = to_vertex
         self.inuse_operations.add(edge)
-        self._compute_topo_order()
+        self.sort_vertices()
 
-    def _mutation_mutate_edge(self) -> None:
+    def mutation_mutate_edge(self) -> None:
         vertex, = np.random.choice(self.vertices_topo_order[1:], size=1)
         edge, = np.random.choice(vertex.out_bound_edges, size=1)
         vertex.remove_edge(edge)
@@ -154,7 +167,7 @@ class ComplexOperation(Operation):
                     return True
         return False
 
-    def _mutation_remove_edge(self) -> None:
+    def mutation_remove_edge(self) -> None:
         """
         Randomly remove an edge. Note that in current implementation,
         the probability for each edge being drawn is not the same. The edge
@@ -174,9 +187,9 @@ class ComplexOperation(Operation):
                 edge.end_vertex = None
                 break
         # Since we have changed the graph structure
-        self._compute_topo_order()
+        self.sort_vertices()
 
-    def _mutation_add_node(self) -> None:
+    def mutation_add_node(self) -> None:
         vertex1, vertex2 = np.random.choice(self.vertices_topo_order, size=2,
                                             replace=False)
         # Never have backward edge, to prevent cycle
@@ -191,9 +204,9 @@ class ComplexOperation(Operation):
         second.end_vertex = to_vertex
         vertex.out_bound_edges.append(second)
         # We changed graph structure
-        self._compute_topo_order()
+        self.sort_vertices()
 
-    def _mutation_remove_node(self) -> None:
+    def mutation_remove_node(self) -> None:
         if len(self.vertices_topo_order) > 2:
             while True:
                 vertex: Vertex = np.random.choice(
@@ -206,20 +219,20 @@ class ComplexOperation(Operation):
                     break
             # We changed graph structure. This will also delete the vertex
             # and all income edges
-            self._compute_topo_order()
+            self.sort_vertices()
 
     def mutate(self) -> bool:
         mutation_type, = np.random.choice(list(MutationTypes), size=1)
         if mutation_type == MutationTypes.ADD_EDGE:
-            self._mutation_add_edge()
+            self.mutation_add_edge()
         elif mutation_type == MutationTypes.MUTATE_EDGE:
-            self._mutation_mutate_edge()
+            self.mutation_mutate_edge()
         elif mutation_type == MutationTypes.REMOVE_EDGE:
-            self._mutation_remove_edge()
+            self.mutation_remove_edge()
         elif mutation_type == MutationTypes.ADD_NODE:
-            self._mutation_add_node()
+            self.mutation_add_node()
         elif mutation_type == MutationTypes.REMOVE_NODE:
-            self._mutation_remove_node()
+            self.mutation_remove_node()
 
         return True
 
