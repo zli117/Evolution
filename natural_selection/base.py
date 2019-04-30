@@ -12,7 +12,7 @@ from tensorflow import keras
 
 class Vertex(object):
     def __init__(self):
-        self.out_bound_edges: List['Operation'] = []
+        self.out_bound_edges: List['Edge'] = []
         self.collected: List[tf.Tensor] = []
         self.order: int = 0
 
@@ -36,15 +36,14 @@ class Vertex(object):
         for out_edge in self.out_bound_edges:
             out_edge.build(aggregated)
 
-    def remove_edge(self, edge: 'Operation') -> bool:
+    def remove_edge(self, edge: 'Edge') -> bool:
         if edge in self.out_bound_edges:
             self.out_bound_edges.remove(edge)
             return True
         return False
 
 
-class Operation(ABC):
-
+class Edge(ABC):
     def __init__(self) -> None:
         self._source_vertex: Optional[Vertex] = None
         self._end_vertex: Optional[Vertex] = None
@@ -84,7 +83,7 @@ class Operation(ABC):
         pass
 
 
-class IdentityOperation(Operation):
+class IdentityOperation(Edge):
 
     def mutate(self) -> bool:
         return False
@@ -97,7 +96,7 @@ class IdentityOperation(Operation):
         return 1
 
 
-class _LayerWrapperMutableChannels(Operation):
+class _LayerWrapperMutableChannels(Edge):
 
     def __init__(self, out_channel_range: Tuple[int, int]) -> None:
         super().__init__()
@@ -122,7 +121,7 @@ class _LayerWrapperMutableChannels(Operation):
         pass
 
 
-class _LayerWrapperImmutableChannels(Operation):
+class _LayerWrapperImmutableChannels(Edge):
 
     def __init__(self) -> None:
         super().__init__()
@@ -147,20 +146,21 @@ class PointConv2D(_LayerWrapperMutableChannels):
 
     def build_layer(self, out_channels: int) -> keras.layers.Layer:
         return keras.layers.Conv2D(kernel_size=(1, 1),
-                                   filters=out_channels)
+                                   filters=out_channels, padding='same')
 
 
 class SeparableConv2D(_LayerWrapperMutableChannels):
 
     def build_layer(self, out_channels: int) -> keras.layers.Layer:
         return keras.layers.SeparableConv2D(kernel_size=(3, 3),
-                                            filters=out_channels)
+                                            filters=out_channels,
+                                            padding='same')
 
 
 class DepthwiseConv2D(_LayerWrapperImmutableChannels):
 
     def build_layer(self) -> keras.layers.Layer:
-        return keras.layers.DepthwiseConv2D(kernel_size=(3, 3))
+        return keras.layers.DepthwiseConv2D(kernel_size=(3, 3), padding='same')
 
 
 class MaxPool2D(_LayerWrapperImmutableChannels):

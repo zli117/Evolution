@@ -9,7 +9,7 @@ import numpy as np
 import tensorflow as tf
 
 from natural_selection.base import IdentityOperation
-from natural_selection.base import Operation
+from natural_selection.base import Edge
 from natural_selection.base import Vertex
 
 
@@ -21,7 +21,7 @@ class MutationTypes(Enum):
     MUTATE_EDGE = 4,
 
 
-class ComplexOperation(Operation):
+class ComplexOperation(Edge):
     """
     Complex operation class. This operation encapsulates a small graph of
     nodes and operations. The graph follows such invariants:
@@ -39,16 +39,16 @@ class ComplexOperation(Operation):
     edge, when the edge is in the graph
     """
 
-    def __init__(self, available_operations: Tuple[Operation, ...],
+    def __init__(self, available_operations: Tuple[Edge, ...],
                  initialize_with_identity: bool = True) -> None:
         super().__init__()
         self.available_operations = available_operations
         self.input_vertex = Vertex()
         self.output_vertex = Vertex()
-        self.inuse_operations: Set[Operation] = set()
+        self.inuse_operations: Set[Edge] = set()
 
         if initialize_with_identity:
-            edge: Operation = IdentityOperation()
+            edge: Edge = IdentityOperation()
         else:
             edge, = np.random.choice(self.available_operations, size=1)
         self.inuse_operations.add(edge)
@@ -80,7 +80,7 @@ class ComplexOperation(Operation):
         if current_ref in finished_status:
             return finished_status[current_ref]
         accessing_set.add(current_ref)
-        to_remove: List[Operation] = []
+        to_remove: List[Edge] = []
         for out_edge in current.out_bound_edges:
             if out_edge.end_vertex:
                 # If can't reach output, the vertex will be removed, as well
@@ -126,7 +126,7 @@ class ComplexOperation(Operation):
         from_vertex: Vertex = max(vertex1, vertex2, key=lambda v: v.order)
         to_vertex: Vertex = min(vertex1, vertex2, key=lambda v: v.order)
 
-        edge: Operation = np.random.choice(self.available_operations, size=1)[0]
+        edge: Edge = np.random.choice(self.available_operations, size=1)[0]
         from_vertex.out_bound_edges.append(edge)
         edge.end_vertex = to_vertex
         self.inuse_operations.add(edge)
@@ -136,7 +136,7 @@ class ComplexOperation(Operation):
         vertex, = np.random.choice(self.vertices_topo_order[1:], size=1)
         edge, = np.random.choice(vertex.out_bound_edges, size=1)
         vertex.remove_edge(edge)
-        new_edge: Operation = np.random.choice(
+        new_edge: Edge = np.random.choice(
             self.available_operations, size=1)[0]
         new_edge.end_vertex = edge.end_vertex
         edge.end_vertex = None

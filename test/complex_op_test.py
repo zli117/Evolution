@@ -1,4 +1,6 @@
-import numpy as np
+from typing import Tuple
+
+import pytest
 
 from natural_selection.base import IdentityOperation
 from natural_selection.base import PointConv2D
@@ -16,7 +18,8 @@ def test_complex_op_creation():
             is complex_operation.input_vertex)
 
 
-def test_sort_vertices():
+@pytest.fixture
+def basic_graph() -> Tuple[ComplexOperation, Vertex, Vertex, Vertex, Vertex]:
     complex_operation = ComplexOperation((PointConv2D((1, 4)),))
     vertex1 = Vertex()
     vertex2 = Vertex()
@@ -42,6 +45,12 @@ def test_sort_vertices():
     vertex3.out_bound_edges.append(edge5)
     edge5.end_vertex = complex_operation.output_vertex
 
+    return complex_operation, vertex1, vertex2, vertex3, vertex4
+
+
+def test_sort_vertices(basic_graph):
+    complex_operation, vertex1, vertex2, vertex3, vertex4 = basic_graph
+
     complex_operation.sort_vertices()
 
     assert len(complex_operation.vertices_topo_order) == 4
@@ -66,8 +75,30 @@ def test_sort_vertices():
     assert vertex1.order == 3
     assert complex_operation.input_vertex.order == 4
 
+    assert len(complex_operation.output_vertex.out_bound_edges) == 0
+    assert len(complex_operation.input_vertex.out_bound_edges) == 2
+    assert len(vertex1.out_bound_edges) == 2
+    assert len(vertex2.out_bound_edges) == 2
+    assert len(vertex3.out_bound_edges) == 1
 
-def test_mock(mocker):
-    mocker.patch('numpy.random.choice', return_value=[1, 2, 3])
-    choices = np.random.choice([1, 2, 3, 4, 5], size=1)
-    assert len(choices) == 1
+
+def test_add_edge1(basic_graph, mocker):
+    # Make sure there's no cycle
+    complex_operation, vertex1, vertex2, vertex3, vertex4 = basic_graph
+    mocker.patch('numpy.random.choice',
+                 return_value=[complex_operation.output_vertex,
+                               complex_operation.input_vertex])
+    complex_operation.mutation_add_edge()
+    assert len(complex_operation.vertices_topo_order) == 4
+    for vertex in complex_operation.vertices_topo_order:
+        order = vertex.order
+        for edge in vertex.out_bound_edges:
+            if order < edge.end_vertex.order:
+                # Edge in back direction => Circle
+                assert False
+    for edge in complex_operation.input_vertex.out_bound_edges:
+        if edge.end_vertex is complex_operation.output_vertex:
+            break
+    else:
+        # The new edge is not there
+        assert False
