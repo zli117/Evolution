@@ -8,8 +8,8 @@ from typing import Tuple, List, Set, Dict
 import numpy as np
 import tensorflow as tf
 
-from natural_selection.base import IdentityOperation
 from natural_selection.base import Edge
+from natural_selection.base import IdentityOperation
 from natural_selection.base import Vertex
 
 
@@ -75,7 +75,6 @@ class ComplexOperation(Edge):
         """
         current_ref = id(current)
         if current_ref in accessing_set:
-            # Error. Circle
             return False
         if current_ref in finished_status:
             return finished_status[current_ref]
@@ -206,7 +205,7 @@ class ComplexOperation(Edge):
         # We changed graph structure
         self.sort_vertices()
 
-    def mutation_remove_node(self) -> None:
+    def mutation_remove_node(self) -> bool:
         if len(self.vertices_topo_order) > 2:
             while True:
                 vertex: Vertex = np.random.choice(
@@ -220,6 +219,7 @@ class ComplexOperation(Edge):
             # We changed graph structure. This will also delete the vertex
             # and all income edges
             self.sort_vertices()
+            return True
 
     def mutate(self) -> bool:
         mutation_type, = np.random.choice(list(MutationTypes), size=1)
@@ -232,7 +232,7 @@ class ComplexOperation(Edge):
         elif mutation_type == MutationTypes.ADD_NODE:
             self.mutation_add_node()
         elif mutation_type == MutationTypes.REMOVE_NODE:
-            self.mutation_remove_node()
+            return self.mutation_remove_node()
 
         return True
 

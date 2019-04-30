@@ -3,6 +3,7 @@ from typing import Tuple
 import pytest
 
 from natural_selection.base import IdentityOperation
+from natural_selection.base import MaxPool2D
 from natural_selection.base import PointConv2D
 from natural_selection.base import Vertex
 from natural_selection.complex_op import ComplexOperation
@@ -85,9 +86,17 @@ def test_sort_vertices(basic_graph):
 def test_add_edge1(basic_graph, mocker):
     # Make sure there's no cycle
     complex_operation, vertex1, vertex2, vertex3, vertex4 = basic_graph
-    mocker.patch('numpy.random.choice',
-                 return_value=[complex_operation.output_vertex,
-                               complex_operation.input_vertex])
+
+    def mock(*args, **kwargs):
+        if kwargs['size'] == 2:
+            return [complex_operation.output_vertex,
+                    complex_operation.input_vertex]
+        if kwargs['size'] == 1:
+            assert isinstance(args[0][0], PointConv2D)
+            return [MaxPool2D()]
+
+    mocker.patch('numpy.random.choice', side_effect=mock)
+
     complex_operation.mutation_add_edge()
     assert len(complex_operation.vertices_topo_order) == 4
     for vertex in complex_operation.vertices_topo_order:
@@ -98,7 +107,55 @@ def test_add_edge1(basic_graph, mocker):
                 assert False
     for edge in complex_operation.input_vertex.out_bound_edges:
         if edge.end_vertex is complex_operation.output_vertex:
+            print(type(edge), type(edge.end_vertex))
+            assert isinstance(edge, MaxPool2D)
             break
     else:
         # The new edge is not there
         assert False
+
+
+def test_add_edge2(basic_graph, mocker):
+    # Make sure it won't break if there are multiple edges between two vertices
+    complex_operation, vertex1, vertex2, vertex3, vertex4 = basic_graph
+    complex_operation.sort_vertices()
+
+    def mock(*args, **kwargs):
+        if kwargs['size'] == 2:
+            return [vertex1, vertex2]
+        if kwargs['size'] == 1:
+            assert isinstance(args[0][0], PointConv2D)
+            return [MaxPool2D()]
+
+    mocker.patch('numpy.random.choice', side_effect=mock)
+
+    complex_operation.mutation_add_edge()
+    assert len(vertex1.out_bound_edges) == 3
+    to_vertex2_count = 0
+    for edge in vertex1.out_bound_edges:
+        if edge.end_vertex is vertex2:
+            to_vertex2_count += 1
+    assert to_vertex2_count == 2
+
+
+def test_mutate_edge3(basic_graph, mocker):
+    # Make sure it won't break if there are multiple edges between two vertices
+    complex_operation, vertex1, vertex2, vertex3, vertex4 = basic_graph
+    complex_operation.sort_vertices()
+
+    def mock(*args, **kwargs):
+        if kwargs['size'] == 2:
+            return [vertex1, vertex2]
+        if kwargs['size'] == 1:
+            assert isinstance(args[0][0], PointConv2D)
+            return [MaxPool2D()]
+
+    mocker.patch('numpy.random.choice', side_effect=mock)
+
+    complex_operation.mutation_add_edge()
+    assert len(vertex1.out_bound_edges) == 3
+    to_vertex2_count = 0
+    for edge in vertex1.out_bound_edges:
+        if edge.end_vertex is vertex2:
+            to_vertex2_count += 1
+    assert to_vertex2_count == 2
