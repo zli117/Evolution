@@ -166,7 +166,7 @@ class ComplexOperation(Edge):
                     return True
         return False
 
-    def mutation_remove_edge(self) -> None:
+    def mutation_remove_edge(self) -> bool:
         """
         Randomly remove an edge. Note that in current implementation,
         the probability for each edge being drawn is not the same. The edge
@@ -175,18 +175,21 @@ class ComplexOperation(Edge):
         Returns:
             None
         """
-        while True:
-            vertex, = np.random.choice(self.vertices_topo_order[1:], size=1)
-            edge, = np.random.choice(vertex.out_bound_edges, size=1)
-            vertex.remove_edge(edge)
-            if not self._check_output_reachable():
-                # Put the edge back and try a different one
-                vertex.out_bound_edges.append(edge)
-            else:
-                edge.end_vertex = None
-                break
-        # Since we have changed the graph structure
-        self.sort_vertices()
+        if len(self.vertices_topo_order) > 2:
+            while True:
+                vertex, = np.random.choice(self.vertices_topo_order[1:], size=1)
+                edge, = np.random.choice(vertex.out_bound_edges, size=1)
+                vertex.remove_edge(edge)
+                if not self._check_output_reachable():
+                    # Put the edge back and try a different one
+                    vertex.out_bound_edges.append(edge)
+                else:
+                    edge.end_vertex = None
+                    break
+            # Since we have changed the graph structure
+            self.sort_vertices()
+            return True
+        return False
 
     def mutation_add_node(self) -> None:
         vertex1, vertex2 = np.random.choice(self.vertices_topo_order, size=2,
@@ -220,6 +223,7 @@ class ComplexOperation(Edge):
             # and all income edges
             self.sort_vertices()
             return True
+        return False
 
     def mutate(self) -> bool:
         mutation_type, = np.random.choice(list(MutationTypes), size=1)
@@ -228,7 +232,7 @@ class ComplexOperation(Edge):
         elif mutation_type == MutationTypes.MUTATE_EDGE:
             self.mutation_mutate_edge()
         elif mutation_type == MutationTypes.REMOVE_EDGE:
-            self.mutation_remove_edge()
+            return self.mutation_remove_edge()
         elif mutation_type == MutationTypes.ADD_NODE:
             self.mutation_add_node()
         elif mutation_type == MutationTypes.REMOVE_NODE:

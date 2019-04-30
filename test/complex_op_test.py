@@ -21,7 +21,7 @@ def test_complex_op_creation():
 
 @pytest.fixture
 def basic_graph() -> Tuple[ComplexOperation, Vertex, Vertex, Vertex, Vertex]:
-    complex_operation = ComplexOperation((PointConv2D((1, 4)),))
+    complex_operation = ComplexOperation((PointConv2D((1, 4)), MaxPool2D()))
     vertex1 = Vertex()
     vertex2 = Vertex()
     vertex3 = Vertex()
@@ -138,24 +138,37 @@ def test_add_edge2(basic_graph, mocker):
     assert to_vertex2_count == 2
 
 
-def test_mutate_edge3(basic_graph, mocker):
+def test_mutate_edge(basic_graph, mocker):
     # Make sure it won't break if there are multiple edges between two vertices
     complex_operation, vertex1, vertex2, vertex3, vertex4 = basic_graph
+
+    edge_to_replace = MaxPool2D()
+    complex_operation.input_vertex.out_bound_edges.append(edge_to_replace)
+    edge_to_replace.end_vertex = complex_operation.output_vertex
+
+    new_edge = PointConv2D((2, 3))
+
     complex_operation.sort_vertices()
 
     def mock(*args, **kwargs):
-        if kwargs['size'] == 2:
-            return [vertex1, vertex2]
-        if kwargs['size'] == 1:
-            assert isinstance(args[0][0], PointConv2D)
-            return [MaxPool2D()]
+        if isinstance(args[0][0], Vertex):
+            return [complex_operation.input_vertex]
+        if edge_to_replace in args[0]:
+            return [edge_to_replace]
+        else:
+            return [new_edge]
 
     mocker.patch('numpy.random.choice', side_effect=mock)
 
-    complex_operation.mutation_add_edge()
-    assert len(vertex1.out_bound_edges) == 3
-    to_vertex2_count = 0
-    for edge in vertex1.out_bound_edges:
-        if edge.end_vertex is vertex2:
-            to_vertex2_count += 1
-    assert to_vertex2_count == 2
+    before_out_edges = list(complex_operation.input_vertex.out_bound_edges)
+    before_out_edges.remove(edge_to_replace)
+
+    complex_operation.mutation_mutate_edge()
+    assert edge_to_replace.end_vertex is None
+    assert new_edge in complex_operation.input_vertex.out_bound_edges
+    assert (len(complex_operation.input_vertex.out_bound_edges)
+            == len(before_out_edges) + 1)
+
+    # Everything before not mutated is still there
+    for edge in before_out_edges:
+        assert edge in complex_operation.input_vertex.out_bound_edges
