@@ -33,9 +33,8 @@ class ComplexOperation(Edge):
     Class level invariants:
     1. input_vertex is not None
     2. output_vertex is not None
-    3. inuse_operations contains all the edges that are currently in the graph
-    4. vertices_topo_order always contains vertices sorted in topological order
-    5. Each edge's end_vertex should point to the the end vertex of this
+    3. vertices_topo_order always contains vertices sorted in topological order
+    4. Each edge's end_vertex should point to the the end vertex of this
     edge, when the edge is in the graph
     """
 
@@ -45,13 +44,11 @@ class ComplexOperation(Edge):
         self.available_operations = available_operations
         self.input_vertex = Vertex()
         self.output_vertex = Vertex()
-        self.inuse_operations: Set[Edge] = set()
 
         if initialize_with_identity:
             edge: Edge = IdentityOperation()
         else:
             edge, = np.random.choice(self.available_operations, size=1)
-        self.inuse_operations.add(edge)
         self.input_vertex.out_bound_edges.append(edge)
         edge.end_vertex = self.output_vertex
         self.vertices_topo_order: List[Vertex] = [self.output_vertex,
@@ -128,7 +125,6 @@ class ComplexOperation(Edge):
         edge: Edge = np.random.choice(self.available_operations, size=1)[0]
         from_vertex.out_bound_edges.append(edge)
         edge.end_vertex = to_vertex
-        self.inuse_operations.add(edge)
         self.sort_vertices()
 
     def mutation_mutate_edge(self) -> None:
@@ -169,26 +165,23 @@ class ComplexOperation(Edge):
     def mutation_remove_edge(self) -> bool:
         """
         Randomly remove an edge. Note that in current implementation,
-        the probability for each edge being drawn is not the same. The edge
-        from a vertex with more outgoing edges is more like to be selected.
+        the probability for each edge being drawn is not the same.
 
         Returns:
-            None
+            True if mutated. False otherwise.
         """
-        if len(self.vertices_topo_order) > 2:
-            while True:
-                vertex, = np.random.choice(self.vertices_topo_order[1:], size=1)
-                edge, = np.random.choice(vertex.out_bound_edges, size=1)
+        # Go through all the edge in random order, until one that will not
+        # break the graph is found
+        for vertex in np.random.permutation(self.vertices_topo_order):
+            for edge in np.random.permutation(vertex.out_bound_edges):
                 vertex.remove_edge(edge)
                 if not self._check_output_reachable():
                     # Put the edge back and try a different one
                     vertex.out_bound_edges.append(edge)
                 else:
                     edge.end_vertex = None
-                    break
-            # Since we have changed the graph structure
-            self.sort_vertices()
-            return True
+                    self.sort_vertices()
+                    return True
         return False
 
     def mutation_add_node(self) -> None:
@@ -208,21 +201,18 @@ class ComplexOperation(Edge):
         # We changed graph structure
         self.sort_vertices()
 
-    def mutation_remove_node(self) -> bool:
+    def mutation_remove_vertex(self) -> bool:
+        # We must have input and output
         if len(self.vertices_topo_order) > 2:
-            while True:
-                vertex: Vertex = np.random.choice(
-                    self.vertices_topo_order[1:-1], size=1)[0]
+            # No input and output vertices
+            for vertex in np.random.permutation(self.vertices_topo_order[1:-1]):
                 out_edges = list(vertex.out_bound_edges)
                 vertex.out_bound_edges.clear()
                 if not self._check_output_reachable():
                     vertex.out_bound_edges.extend(out_edges)
                 else:
-                    break
-            # We changed graph structure. This will also delete the vertex
-            # and all income edges
-            self.sort_vertices()
-            return True
+                    self.sort_vertices()
+                    return True
         return False
 
     def mutate(self) -> bool:
@@ -236,7 +226,7 @@ class ComplexOperation(Edge):
         elif mutation_type == MutationTypes.ADD_NODE:
             self.mutation_add_node()
         elif mutation_type == MutationTypes.REMOVE_NODE:
-            return self.mutation_remove_node()
+            return self.mutation_remove_vertex()
 
         return True
 
@@ -251,6 +241,7 @@ class ComplexOperation(Edge):
     @property
     def layers_below(self) -> int:
         max_layers = 1
-        for operation in self.inuse_operations:
-            max_layers = max(max_layers, operation.layers_below)
+        for vertex in self.vertices_topo_order:
+            for operation in vertex.out_bound_edges:
+                max_layers = max(max_layers, operation.layers_below)
         return max_layers + 1

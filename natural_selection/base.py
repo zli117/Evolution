@@ -11,6 +11,7 @@ from tensorflow import keras
 
 
 class Vertex(object):
+
     def __init__(self):
         self.out_bound_edges: List['Edge'] = []
         self.collected: List[tf.Tensor] = []
@@ -44,6 +45,7 @@ class Vertex(object):
 
 
 class Edge(ABC):
+
     def __init__(self) -> None:
         self._source_vertex: Optional[Vertex] = None
         self._end_vertex: Optional[Vertex] = None
