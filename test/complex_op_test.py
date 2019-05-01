@@ -279,7 +279,7 @@ def test_remove_node_success(basic_graph_no_v12, mocker):
     assert len(vertex1.out_bound_edges) == 1
 
 
-def test_remove_node_fail(mocker):
+def test_remove_node_fail():
     complex_operation = ComplexOperation((PointConv2D((1, 4)),))
     assert not complex_operation.mutation_remove_vertex()
 
