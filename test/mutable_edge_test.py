@@ -126,7 +126,7 @@ class MockEdge(Edge):
         pass
 
     @property
-    def layers_below(self) -> int:
+    def level(self) -> int:
         return 1
 
     def deep_copy(self) -> Edge:

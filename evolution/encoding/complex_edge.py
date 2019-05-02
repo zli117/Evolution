@@ -169,18 +169,18 @@ class ComplexEdge(Edge):
     def build(self, x: tf.Tensor) -> tf.Tensor:
         for vertex in self.vertices_topo_order:
             vertex.reset()
-        with tf.name_scope('%s.layer_%d' % (self.name, self.layers_below)):
+        with tf.name_scope('%s.layer_%d' % (self.name, self.level)):
             self.input_vertex.collect(x)
             for vertex in reversed(self.vertices_topo_order[1:]):
                 vertex.submit()
             return self.output_vertex.aggregate()
 
     @property
-    def layers_below(self) -> int:
+    def level(self) -> int:
         if self._layers_below < 1:
             max_layers = 1
             for vertex in self.vertices_topo_order:
                 for operation in vertex.out_bound_edges:
-                    max_layers = max(max_layers, operation.layers_below)
+                    max_layers = max(max_layers, operation.level)
             self._layers_below = max_layers + 1
         return self._layers_below

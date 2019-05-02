@@ -3,9 +3,9 @@ Basic units
 """
 from abc import ABC
 from abc import abstractmethod
-from random import randint
 from typing import List, Optional, Tuple, Callable
 
+import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 
@@ -86,7 +86,7 @@ class Edge(ABC):
 
     @property
     @abstractmethod
-    def layers_below(self) -> int:
+    def level(self) -> int:
         pass
 
     @abstractmethod
@@ -106,7 +106,7 @@ class IdentityOperation(Edge):
         pass
 
     @property
-    def layers_below(self) -> int:
+    def level(self) -> int:
         return 1
 
     def deep_copy(self) -> Edge:
@@ -133,7 +133,7 @@ class LambdaEdge(Edge):
         return self.function(x)
 
     @property
-    def layers_below(self) -> int:
+    def level(self) -> int:
         return 1
 
     def deep_copy(self) -> Edge:
@@ -149,7 +149,7 @@ class _LayerWrapperMutableChannels(Edge):
         self.mutate()
 
     def mutate(self) -> bool:
-        out_channels = randint(*self.out_channel_range)
+        out_channels = np.random.randint(*self.out_channel_range)
         self._layer = self.build_layer(out_channels)
         return True
 
@@ -160,7 +160,7 @@ class _LayerWrapperMutableChannels(Edge):
         pass
 
     @property
-    def layers_below(self) -> int:
+    def level(self) -> int:
         return 1
 
     @abstractmethod
@@ -184,7 +184,7 @@ class _LayerWrapperImmutableChannels(Edge):
         pass
 
     @property
-    def layers_below(self) -> int:
+    def level(self) -> int:
         return 1
 
     @abstractmethod
