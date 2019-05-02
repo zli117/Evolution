@@ -36,7 +36,7 @@ class ComplexEdge(Edge):
         self.vertices_topo_order: List[Vertex] = [self.output_vertex,
                                                   self.input_vertex]
 
-    def deep_copy_to(self, copy: 'ComplexEdge') -> None:
+    def deep_copy_graph(self, copy: 'ComplexEdge') -> None:
         for _ in range(len(self.vertices_topo_order) - 2):
             copy.vertices_topo_order.append(Vertex())
 
@@ -70,7 +70,6 @@ class ComplexEdge(Edge):
         """
         current_ref = id(current)
         if current_ref in accessing_set:
-            # Cycle
             raise RuntimeError('Found cycle in graph')
         if current_ref in finished_status:
             return finished_status[current_ref]

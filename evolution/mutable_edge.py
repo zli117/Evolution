@@ -44,12 +44,12 @@ class MutableEdge(ComplexEdge):
 
         self.sort_vertices()
 
-    def deep_copy(self) -> 'Edge':
+    def deep_copy(self) -> Edge:
         copy_avail_operations = tuple([op.deep_copy()
                                        for op in self.available_operations])
         copy = MutableEdge(copy_avail_operations,
                            max_vertices=self.max_vertices)
-        super().deep_copy_to(copy)
+        super().deep_copy_graph(copy)
         return copy
 
     def mutation_add_edge(self) -> None:
