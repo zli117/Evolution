@@ -4,7 +4,7 @@ Basic units
 from abc import ABC
 from abc import abstractmethod
 from random import randint
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Callable
 
 import tensorflow as tf
 from tensorflow import keras
@@ -109,8 +109,35 @@ class IdentityOperation(Edge):
     def layers_below(self) -> int:
         return 1
 
-    def deep_copy(self) -> 'Edge':
+    def deep_copy(self) -> Edge:
         return IdentityOperation()
+
+
+class LambdaEdge(Edge):
+    """
+    If this edge can change the shape of the tensor and used as an option for
+    mutation, could potentially break the graph.
+    """
+
+    def __init__(self, function: Callable[[tf.Tensor], tf.Tensor]) -> None:
+        super().__init__()
+        self.function = function
+
+    def mutate(self) -> bool:
+        return False
+
+    def invalidate_layer_count(self) -> None:
+        pass
+
+    def build(self, x: tf.Tensor) -> tf.Tensor:
+        return self.function(x)
+
+    @property
+    def layers_below(self) -> int:
+        return 1
+
+    def deep_copy(self) -> Edge:
+        return LambdaEdge(self.function)
 
 
 class _LayerWrapperMutableChannels(Edge):

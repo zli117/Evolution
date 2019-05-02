@@ -65,7 +65,7 @@ out = edge.build(x)
 model = keras.Model(inputs=x, outputs=out)
 
 model.compile(loss=keras.losses.categorical_crossentropy,
-              optimizer=keras.optimizers.Adadelta(),
+              optimizer=keras.optimizers.Adam(),
               metrics=['accuracy'])
 
 tensor_board = keras.callbacks.TensorBoard(batch_size=10, write_graph=True)
