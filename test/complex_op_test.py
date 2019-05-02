@@ -2,12 +2,12 @@ from typing import Tuple
 
 import pytest
 
-from natural_selection.base import Edge
-from natural_selection.base import IdentityOperation
-from natural_selection.base import MaxPool2D
-from natural_selection.base import PointConv2D
-from natural_selection.base import Vertex
-from natural_selection.complex_op import ComplexOperation
+from evolution.base import Edge
+from evolution.base import IdentityOperation
+from evolution.base import MaxPool2D
+from evolution.base import PointConv2D
+from evolution.base import Vertex
+from evolution.complex_op import ComplexOperation
 
 
 def test_complex_op_creation():

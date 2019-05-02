@@ -1,5 +1,5 @@
 """
-
+A module for complex hierarchical graph.
 """
 from enum import Enum
 from queue import Queue
@@ -8,9 +8,9 @@ from typing import Tuple, List, Set, Dict
 import numpy as np
 import tensorflow as tf
 
-from natural_selection.base import Edge
-from natural_selection.base import IdentityOperation
-from natural_selection.base import Vertex
+from evolution.base import Edge
+from evolution.base import IdentityOperation
+from evolution.base import Vertex
 
 
 class MutationTypes(Enum):
