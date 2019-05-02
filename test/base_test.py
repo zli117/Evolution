@@ -1,2 +1,10 @@
-def test_vertex():
-    assert True
+from typing import cast
+
+from evolution.base import PointConv2D
+
+
+def test_point_conv2d():
+    edge = PointConv2D((0, 100))
+    edge_copy = cast(type(edge), edge.deep_copy())
+
+    assert edge.out_channel_range == edge_copy.out_channel_range
