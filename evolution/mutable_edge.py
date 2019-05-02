@@ -22,10 +22,10 @@ class MutationTypes(Enum):
 
 class MutableEdge(ComplexEdge):
 
-    def __init__(self, available_operations: Tuple[Edge, ...],
+    def __init__(self, available_operations: Tuple[Edge, ...], name: str = '',
                  initialize_with_identity: bool = True,
                  max_vertices: int = -1) -> None:
-        super().__init__()
+        super().__init__(name)
 
         if 0 < max_vertices < 2:
             raise RuntimeError(
@@ -50,6 +50,7 @@ class MutableEdge(ComplexEdge):
         copy = MutableEdge(copy_avail_operations,
                            max_vertices=self.max_vertices)
         super().deep_copy_graph(copy)
+        super().deep_copy_info(copy)
         return copy
 
     def mutation_add_edge(self) -> None:

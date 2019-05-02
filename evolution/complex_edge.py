@@ -28,13 +28,15 @@ class ComplexEdge(Edge):
     edge, when the edge is in the graph
     """
 
-    def __init__(self) -> None:
+    def __init__(self, name: str) -> None:
         super().__init__()
         self.input_vertex = Vertex()
         self.output_vertex = Vertex()
 
         self.vertices_topo_order: List[Vertex] = [self.output_vertex,
                                                   self.input_vertex]
+        self.name = name
+        self._layers_below = -1
 
     def deep_copy_graph(self, copy: 'ComplexEdge') -> None:
         """
@@ -63,6 +65,14 @@ class ComplexEdge(Edge):
                         edge.end_vertex.order]
 
         copy.sort_vertices()
+
+    def deep_copy_info(self, copy: 'ComplexEdge') -> None:
+        copy.name = self.name
+        copy._layers_below = self._layers_below
+
+    @abstractmethod
+    def deep_copy(self) -> Edge:
+        pass
 
     def _topo_sort_recursion(self, current: Vertex,
                              vertex_list: List[Vertex],
@@ -163,8 +173,10 @@ class ComplexEdge(Edge):
 
     @property
     def layers_below(self) -> int:
-        max_layers = 1
-        for vertex in self.vertices_topo_order:
-            for operation in vertex.out_bound_edges:
-                max_layers = max(max_layers, operation.layers_below)
-        return max_layers + 1
+        if self._layers_below == -1:
+            max_layers = 1
+            for vertex in self.vertices_topo_order:
+                for operation in vertex.out_bound_edges:
+                    max_layers = max(max_layers, operation.layers_below)
+            self._layers_below = max_layers + 1
+        return self._layers_below

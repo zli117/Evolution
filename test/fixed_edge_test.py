@@ -6,7 +6,7 @@ from evolution.fixed_edge import FixedEdge
 
 class NoCycleConnected(FixedEdge):
 
-    def deep_copy(self) -> Edge:
+    def construct_new_instance(self) -> Edge:
         return NoCycleConnected()
 
     def build_graph(self) -> None:
@@ -33,7 +33,7 @@ class NoCycleConnected(FixedEdge):
 
 class NoCycleNotConnected(FixedEdge):
 
-    def deep_copy(self) -> Edge:
+    def construct_new_instance(self) -> 'FixedEdge':
         return NoCycleConnected()
 
     def build_graph(self) -> None:
@@ -53,7 +53,7 @@ class NoCycleNotConnected(FixedEdge):
 
 class CycleConnected(FixedEdge):
 
-    def deep_copy(self) -> Edge:
+    def construct_new_instance(self) -> 'FixedEdge':
         return NoCycleConnected()
 
     def build_graph(self) -> None:
