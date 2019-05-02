@@ -1,19 +1,13 @@
-import tensorflow as tf
+from abc import abstractmethod
 
-from evolution.base import Edge
-from evolution.base import Vertex
+from evolution.complex_edge import ComplexEdge
 
-class FixedEdge(Edge):
+
+class FixedEdge(ComplexEdge):
 
     def mutate(self) -> bool:
-        pass
+        return False
 
-    def build(self, x: tf.Tensor) -> tf.Tensor:
-        pass
-
-    @property
-    def layers_below(self) -> int:
-        pass
-
-    def deep_copy(self) -> 'Edge':
+    @abstractmethod
+    def build_graph(self) -> None:
         pass
