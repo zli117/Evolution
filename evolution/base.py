@@ -76,6 +76,10 @@ class Edge(ABC):
         pass
 
     @abstractmethod
+    def invalidate_layer_count(self) -> None:
+        pass
+
+    @abstractmethod
     def build(self, x: tf.Tensor) -> tf.Tensor:
         pass
 
@@ -95,7 +99,10 @@ class IdentityOperation(Edge):
         return False
 
     def build(self, x: tf.Tensor) -> tf.Tensor:
-        return x
+        return tf.identity(x)
+
+    def invalidate_layer_count(self) -> None:
+        pass
 
     @property
     def layers_below(self) -> int:
@@ -121,6 +128,9 @@ class _LayerWrapperMutableChannels(Edge):
     def build(self, x: tf.Tensor) -> tf.Tensor:
         return self._layer(x)
 
+    def invalidate_layer_count(self) -> None:
+        pass
+
     @property
     def layers_below(self) -> int:
         return 1
@@ -141,6 +151,9 @@ class _LayerWrapperImmutableChannels(Edge):
 
     def build(self, x: tf.Tensor) -> tf.Tensor:
         return self._layer(x)
+
+    def invalidate_layer_count(self) -> None:
+        pass
 
     @property
     def layers_below(self) -> int:

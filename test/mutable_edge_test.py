@@ -122,6 +122,9 @@ class MockEdge(Edge):
     def build(self, x: tf.Tensor) -> tf.Tensor:
         return x
 
+    def invalidate_layer_count(self) -> None:
+        pass
+
     @property
     def layers_below(self) -> int:
         return 1

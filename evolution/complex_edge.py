@@ -163,6 +163,9 @@ class ComplexEdge(Edge):
     def mutate(self) -> bool:
         pass
 
+    def invalidate_layer_count(self) -> None:
+        self._layers_below = -1
+
     def build(self, x: tf.Tensor) -> tf.Tensor:
         for vertex in self.vertices_topo_order:
             vertex.reset()
@@ -173,7 +176,7 @@ class ComplexEdge(Edge):
 
     @property
     def layers_below(self) -> int:
-        if self._layers_below == -1:
+        if self._layers_below < 1:
             max_layers = 1
             for vertex in self.vertices_topo_order:
                 for operation in vertex.out_bound_edges:
