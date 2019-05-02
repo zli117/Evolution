@@ -6,10 +6,10 @@ from typing import Tuple
 
 import numpy as np
 
-from evolution.base import Edge
-from evolution.base import IdentityOperation
-from evolution.base import Vertex
-from evolution.complex_edge import ComplexEdge
+from evolution.encoding.base import Edge
+from evolution.encoding.base import IdentityOperation
+from evolution.encoding.base import Vertex
+from evolution.encoding.complex_edge import ComplexEdge
 
 
 class MutationTypes(Enum):

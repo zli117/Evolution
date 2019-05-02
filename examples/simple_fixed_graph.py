@@ -1,13 +1,13 @@
 import numpy as np
 from tensorflow import keras
 
-from evolution.base import IdentityOperation
-from evolution.base import PointConv2D
-from evolution.base import ReLU
-from evolution.base import Vertex
-from evolution.base import Dense
-from evolution.base import Flatten
-from evolution.fixed_edge import FixedEdge
+from evolution.encoding.base import Dense
+from evolution.encoding.base import Flatten
+from evolution.encoding.base import IdentityOperation
+from evolution.encoding.base import PointConv2D
+from evolution.encoding.base import ReLU
+from evolution.encoding.base import Vertex
+from evolution.encoding.fixed_edge import FixedEdge
 
 
 class TestEdge1(FixedEdge):

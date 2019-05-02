@@ -1,7 +1,7 @@
 from abc import abstractmethod
 
-from evolution.base import Edge
-from evolution.complex_edge import ComplexEdge
+from evolution.encoding.base import Edge
+from evolution.encoding.complex_edge import ComplexEdge
 
 
 class FixedEdge(ComplexEdge):

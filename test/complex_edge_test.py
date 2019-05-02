@@ -1,4 +1,4 @@
-from evolution.base import IdentityOperation
+from evolution.encoding.base import IdentityOperation
 
 
 def test_cycle_detection(basic_graph):

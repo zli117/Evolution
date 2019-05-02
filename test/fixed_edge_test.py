@@ -1,7 +1,7 @@
-from evolution.base import Edge
-from evolution.base import IdentityOperation
-from evolution.base import Vertex
-from evolution.fixed_edge import FixedEdge
+from evolution.encoding.base import Edge
+from evolution.encoding.base import IdentityOperation
+from evolution.encoding.base import Vertex
+from evolution.encoding.fixed_edge import FixedEdge
 
 
 class NoCycleConnected(FixedEdge):

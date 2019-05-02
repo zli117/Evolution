@@ -1,6 +1,6 @@
 from typing import cast
 
-from evolution.base import PointConv2D
+from evolution.encoding.base import PointConv2D
 
 
 def test_point_conv2d():

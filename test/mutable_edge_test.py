@@ -2,12 +2,12 @@ from typing import cast
 
 import tensorflow as tf
 
-from evolution.base import Edge
-from evolution.base import IdentityOperation
-from evolution.base import MaxPool2D
-from evolution.base import PointConv2D
-from evolution.base import Vertex
-from evolution.mutable_edge import MutableEdge
+from evolution.encoding.base import Edge
+from evolution.encoding.base import IdentityOperation
+from evolution.encoding.base import MaxPool2D
+from evolution.encoding.base import PointConv2D
+from evolution.encoding.base import Vertex
+from evolution.encoding.mutable_edge import MutableEdge
 
 
 def test_complex_op_creation():

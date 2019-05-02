@@ -7,8 +7,8 @@ from typing import List, Set, Dict
 
 import tensorflow as tf
 
-from evolution.base import Edge
-from evolution.base import Vertex
+from evolution.encoding.base import Edge
+from evolution.encoding.base import Vertex
 
 
 class ComplexEdge(Edge):

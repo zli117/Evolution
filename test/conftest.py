@@ -2,11 +2,11 @@ from typing import Tuple
 
 import pytest
 
-from evolution.base import IdentityOperation
-from evolution.base import MaxPool2D
-from evolution.base import PointConv2D
-from evolution.base import Vertex
-from evolution.mutable_edge import MutableEdge
+from evolution.encoding.base import IdentityOperation
+from evolution.encoding.base import MaxPool2D
+from evolution.encoding.base import PointConv2D
+from evolution.encoding.base import Vertex
+from evolution.encoding.mutable_edge import MutableEdge
 
 
 @pytest.fixture()
