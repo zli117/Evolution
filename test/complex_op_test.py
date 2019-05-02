@@ -154,6 +154,7 @@ class MockEdge(Edge):
     def __init__(self, mutated: bool = True):
         super().__init__()
         self.mutated = mutated
+        self.deep_copy_count = 0
 
     def mutate(self) -> bool:
         return self.mutated
@@ -166,7 +167,7 @@ class MockEdge(Edge):
         return 1
 
     def deep_copy(self) -> 'Edge':
-        print('Deep Copy')
+        self.deep_copy_count += 1
         return self
 
 
@@ -197,6 +198,7 @@ def test_mutate_edge(basic_graph, mocker):
     complex_operation.mutation_mutate_edge()
     assert edge_to_replace.end_vertex is None
     assert new_edge in complex_operation.input_vertex.out_bound_edges
+    assert new_edge.deep_copy_count == 1
     assert (len(complex_operation.input_vertex.out_bound_edges)
             == len(before_out_edges) + 1)
 
@@ -272,6 +274,7 @@ def test_mutation_add_node(basic_graph_no_v12, mocker):
 
     complex_operation.mutation_add_vertex()
     assert edge2.end_vertex is vertex2
+    assert edge2.deep_copy_count == 1
     assert vertex2.order < vertex1.order
 
 
