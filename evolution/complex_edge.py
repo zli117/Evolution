@@ -37,6 +37,15 @@ class ComplexEdge(Edge):
                                                   self.input_vertex]
 
     def deep_copy_graph(self, copy: 'ComplexEdge') -> None:
+        """
+        Deep copy the graph to another complex edge
+        Assuming the invariants holds
+
+        Args:
+            copy: To which the graph should be copied to
+        Returns:
+            None
+        """
         for _ in range(len(self.vertices_topo_order) - 2):
             copy.vertices_topo_order.append(Vertex())
 
@@ -48,8 +57,10 @@ class ComplexEdge(Edge):
             for edge in vertex.out_bound_edges:
                 copy_edge = edge.deep_copy()
                 copy_vertex.out_bound_edges.append(copy_edge)
-                copy_edge.end_vertex = copy.vertices_topo_order[
-                    edge.end_vertex.order]
+                # Check here to make mypy happy
+                if edge.end_vertex:
+                    copy_edge.end_vertex = copy.vertices_topo_order[
+                        edge.end_vertex.order]
 
         copy.sort_vertices()
 
