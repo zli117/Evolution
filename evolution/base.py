@@ -12,10 +12,11 @@ from tensorflow import keras
 
 class Vertex(object):
 
-    def __init__(self):
+    def __init__(self, name: str = '') -> None:
         self.out_bound_edges: List['Edge'] = []
         self.collected: List[tf.Tensor] = []
         self.order: int = 0
+        self.name = name
 
     def reset(self) -> None:
         self.collected = []
@@ -24,18 +25,18 @@ class Vertex(object):
         self.collected.append(x)
 
     def aggregate(self) -> tf.Tensor:
-        if not self.collected:
-            # Should throw error
-            pass
-        elif len(self.collected) == 1:
-            return self.collected[0]
-        else:
-            return keras.layers.concatenate(self.collected)
+        with tf.name_scope('%s' % self.name):
+            if not self.collected:
+                raise RuntimeError('Nothing collected at vertex %s' % self.name)
+            elif len(self.collected) == 1:
+                return self.collected[0]
+            else:
+                return keras.layers.concatenate(self.collected)
 
     def submit(self) -> None:
         aggregated = self.aggregate()
         for out_edge in self.out_bound_edges:
-            out_edge.build(aggregated)
+            out_edge.submit(aggregated)
 
     def remove_edge(self, edge: 'Edge') -> bool:
         if edge in self.out_bound_edges:
@@ -99,7 +100,7 @@ class IdentityOperation(Edge):
         return False
 
     def build(self, x: tf.Tensor) -> tf.Tensor:
-        return tf.identity(x)
+        return x
 
     def invalidate_layer_count(self) -> None:
         pass
@@ -234,6 +235,36 @@ class ELU(_LayerWrapperImmutableChannels):
 
     def build_layer(self) -> keras.layers.Layer:
         return keras.layers.ELU()
+
+    def deep_copy(self) -> 'Edge':
+        return ELU()
+
+
+class Flatten(_LayerWrapperImmutableChannels):
+    """
+    This edge will change the shape of the tensor. If used as an option for
+    mutation, could potentially break the graph.
+    """
+
+    def build_layer(self) -> keras.layers.Layer:
+        return keras.layers.Flatten()
+
+    def deep_copy(self) -> 'Edge':
+        return ELU()
+
+
+class Dense(_LayerWrapperImmutableChannels):
+    """
+    This edge will change the shape of the tensor. If used as an option for
+    mutation, could potentially break the graph.
+    """
+
+    def __init__(self, units: int) -> None:
+        self.units = units
+        super().__init__()
+
+    def build_layer(self) -> keras.layers.Layer:
+        return keras.layers.Dense(self.units)
 
     def deep_copy(self) -> 'Edge':
         return ELU()

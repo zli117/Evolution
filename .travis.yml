@@ -11,3 +11,4 @@ script:
   - pytest
   - pycodestyle --max-line-length=80 --count --statistics .
   - mypy evolution/ --disallow-incomplete-defs
+  - mypy examples/ --disallow-incomplete-defs

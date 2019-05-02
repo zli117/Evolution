@@ -30,8 +30,8 @@ class ComplexEdge(Edge):
 
     def __init__(self, name: str) -> None:
         super().__init__()
-        self.input_vertex = Vertex()
-        self.output_vertex = Vertex()
+        self.input_vertex = Vertex(name='input')
+        self.output_vertex = Vertex(name='output')
 
         self.vertices_topo_order: List[Vertex] = [self.output_vertex,
                                                   self.input_vertex]
@@ -169,9 +169,9 @@ class ComplexEdge(Edge):
     def build(self, x: tf.Tensor) -> tf.Tensor:
         for vertex in self.vertices_topo_order:
             vertex.reset()
-        with tf.name_scope('%s-layer %d' % (self.name, self.layers_below)):
+        with tf.name_scope('%s.layer_%d' % (self.name, self.layers_below)):
             self.input_vertex.collect(x)
-            for vertex in reversed(self.vertices_topo_order):
+            for vertex in reversed(self.vertices_topo_order[1:]):
                 vertex.submit()
             return self.output_vertex.aggregate()
 
