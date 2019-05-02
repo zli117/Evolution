@@ -21,7 +21,7 @@ class MutationTypes(Enum):
     MUTATE_EDGE = 4,
 
 
-class ComplexOperation(Edge):
+class ComplexEdge(Edge):
     """
     Complex operation class. This operation encapsulates a small graph of
     nodes and operations. The graph follows such invariants:
@@ -66,8 +66,8 @@ class ComplexOperation(Edge):
     def deep_copy(self) -> 'Edge':
         copy_avail_operations = tuple([op.deep_copy()
                                        for op in self.available_operations])
-        copy = ComplexOperation(copy_avail_operations,
-                                max_vertices=self.max_vertices)
+        copy = ComplexEdge(copy_avail_operations,
+                           max_vertices=self.max_vertices)
         # Copy vertices
         for _ in range(len(self.vertices_topo_order) - 2):
             copy.vertices_topo_order.append(Vertex())
