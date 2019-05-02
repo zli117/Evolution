@@ -126,7 +126,7 @@ class MockEdge(Edge):
     def layers_below(self) -> int:
         return 1
 
-    def deep_copy(self) -> 'Edge':
+    def deep_copy(self) -> Edge:
         self.deep_copy_count += 1
         return self
 
@@ -142,7 +142,7 @@ def test_mutate_edge(basic_graph, mocker):
 
     complex_operation.sort_vertices()
 
-    def mock(*args, **kwargs):
+    def mock(*args, **_):
         if isinstance(args[0][0], Vertex):
             return [complex_operation.input_vertex]
         if edge_to_replace in args[0]:
@@ -224,7 +224,7 @@ def test_mutation_add_node(basic_graph_no_v12, mocker):
     edge1 = MaxPool2D()
     edge2 = MockEdge()
 
-    def mock(*args, **kwargs):
+    def mock(*args, **_):
         if isinstance(args[0][0], Vertex):
             return [vertex1, vertex2]
         if isinstance(args[0][0], Edge):
