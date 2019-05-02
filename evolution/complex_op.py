@@ -39,9 +39,17 @@ class ComplexOperation(Edge):
     """
 
     def __init__(self, available_operations: Tuple[Edge, ...],
-                 initialize_with_identity: bool = True) -> None:
+                 initialize_with_identity: bool = True,
+                 max_vertices: int = -1) -> None:
         super().__init__()
+
+        if 0 < max_vertices < 2:
+            raise RuntimeError(
+                'Max vertices: %d is too small. Must be at least 2 if '
+                'enabled.' % max_vertices)
+
         self.available_operations = available_operations
+        self.max_vertices = max_vertices
         self.input_vertex = Vertex()
         self.output_vertex = Vertex()
 
@@ -54,6 +62,29 @@ class ComplexOperation(Edge):
         self.vertices_topo_order: List[Vertex] = [self.output_vertex,
                                                   self.input_vertex]
         self.sort_vertices()
+
+    def deep_copy(self) -> 'Edge':
+        copy_avail_operations = tuple([op.deep_copy()
+                                       for op in self.available_operations])
+        copy = ComplexOperation(copy_avail_operations,
+                                max_vertices=self.max_vertices)
+        # Copy vertices
+        for _ in range(len(self.vertices_topo_order) - 2):
+            copy.vertices_topo_order.append(Vertex())
+
+        # Clear existing edges
+        copy.input_vertex.out_bound_edges.clear()
+        # Copy edges
+        for i, vertex in enumerate(self.vertices_topo_order):
+            copy_vertex = copy.vertices_topo_order[i]
+            for edge in vertex.out_bound_edges:
+                copy_edge = edge.deep_copy()
+                copy_vertex.out_bound_edges.append(copy_edge)
+                copy_edge.end_vertex = copy.vertices_topo_order[
+                    edge.end_vertex.order]
+
+        copy.sort_vertices()
+        return copy
 
     def _topo_sort_recursion(self, current: Vertex,
                              vertex_list: List[Vertex],
@@ -123,6 +154,7 @@ class ComplexOperation(Edge):
         to_vertex: Vertex = min(vertex1, vertex2, key=lambda v: v.order)
 
         edge: Edge = np.random.choice(self.available_operations, size=1)[0]
+        edge = edge.deep_copy()
         from_vertex.out_bound_edges.append(edge)
         edge.end_vertex = to_vertex
         self.sort_vertices()
@@ -133,6 +165,7 @@ class ComplexOperation(Edge):
         vertex.remove_edge(edge)
         new_edge: Edge = np.random.choice(
             self.available_operations, size=1)[0]
+        new_edge = new_edge.deep_copy()
         new_edge.end_vertex = edge.end_vertex
         edge.end_vertex = None
         vertex.out_bound_edges.append(new_edge)
@@ -184,22 +217,29 @@ class ComplexOperation(Edge):
                     return True
         return False
 
-    def mutation_add_node(self) -> None:
+    def mutation_add_vertex(self) -> bool:
+        if 2 <= self.max_vertices <= len(self.vertices_topo_order):
+            return False
         vertex1, vertex2 = np.random.choice(self.vertices_topo_order, size=2,
                                             replace=False)
         # Never have backward edge, to prevent cycle
         from_vertex: Vertex = max(vertex1, vertex2, key=lambda v: v.order)
         to_vertex: Vertex = min(vertex1, vertex2, key=lambda v: v.order)
 
-        first, second = np.random.choice(self.available_operations, size=2,
-                                         replace=True)
+        edges: Tuple[Edge, Edge] = np.random.choice(self.available_operations,
+                                                    size=2, replace=True)
+        first, second = edges
         vertex = Vertex()
+        first = first.deep_copy()
+        second = second.deep_copy()
         first.end_vertex = vertex
         from_vertex.out_bound_edges.append(first)
         second.end_vertex = to_vertex
         vertex.out_bound_edges.append(second)
+
         # We changed graph structure
         self.sort_vertices()
+        return True
 
     def mutation_remove_vertex(self) -> bool:
         # We must have input and output
@@ -224,7 +264,7 @@ class ComplexOperation(Edge):
         elif mutation_type == MutationTypes.REMOVE_EDGE:
             return self.mutation_remove_edge()
         elif mutation_type == MutationTypes.ADD_NODE:
-            self.mutation_add_node()
+            return self.mutation_add_vertex()
         elif mutation_type == MutationTypes.REMOVE_NODE:
             return self.mutation_remove_vertex()
 

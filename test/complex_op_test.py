@@ -1,6 +1,7 @@
-from typing import Tuple
+from typing import Tuple, cast
 
 import pytest
+import tensorflow as tf
 
 from evolution.base import Edge
 from evolution.base import IdentityOperation
@@ -148,6 +149,27 @@ def test_add_edge2(basic_graph, mocker):
     assert to_vertex2_count == 2
 
 
+class MockEdge(Edge):
+
+    def __init__(self, mutated: bool = True):
+        super().__init__()
+        self.mutated = mutated
+
+    def mutate(self) -> bool:
+        return self.mutated
+
+    def build(self, x: tf.Tensor) -> tf.Tensor:
+        return x
+
+    @property
+    def layers_below(self) -> int:
+        return 1
+
+    def deep_copy(self) -> 'Edge':
+        print('Deep Copy')
+        return self
+
+
 def test_mutate_edge(basic_graph, mocker):
     complex_operation, vertex1, vertex2, vertex3, vertex4 = basic_graph
 
@@ -155,7 +177,7 @@ def test_mutate_edge(basic_graph, mocker):
     complex_operation.input_vertex.out_bound_edges.append(edge_to_replace)
     edge_to_replace.end_vertex = complex_operation.output_vertex
 
-    new_edge = PointConv2D((2, 3))
+    new_edge = MockEdge()
 
     complex_operation.sort_vertices()
 
@@ -237,8 +259,8 @@ def test_mutation_add_node(basic_graph_no_v12, mocker):
     vertex2.order = min(v1_order, v2_order)
     vertex1.order = max(v1_order, v2_order)
 
-    edge1 = IdentityOperation()
-    edge2 = MaxPool2D()
+    edge1 = MaxPool2D()
+    edge2 = MockEdge()
 
     def mock(*args, **kwargs):
         if isinstance(args[0][0], Vertex):
@@ -248,9 +270,19 @@ def test_mutation_add_node(basic_graph_no_v12, mocker):
 
     mocker.patch('numpy.random.choice', side_effect=mock)
 
-    complex_operation.mutation_add_node()
+    complex_operation.mutation_add_vertex()
     assert edge2.end_vertex is vertex2
     assert vertex2.order < vertex1.order
+
+
+def test_mutation_add_node_max_vertex():
+    complex_operation = ComplexOperation((PointConv2D((1, 4)),), max_vertices=2)
+    assert not complex_operation.mutation_add_vertex()
+
+    complex_operation = ComplexOperation((PointConv2D((1, 4)),), max_vertices=3)
+    assert complex_operation.mutation_add_vertex()
+    assert len(complex_operation.vertices_topo_order) == 3
+    assert not complex_operation.mutation_add_vertex()
 
 
 def test_remove_node_success(basic_graph_no_v12, mocker):
@@ -301,3 +333,47 @@ def test_remove_node_fail():
     complex_operation.sort_vertices()
     assert len(complex_operation.vertices_topo_order) == 4
     assert not complex_operation.mutation_remove_vertex()
+
+
+def test_max_vertices():
+    try:
+        ComplexOperation((PointConv2D((1, 4)),), max_vertices=1)
+        assert False
+    except RuntimeError:
+        pass
+
+    try:
+        ComplexOperation((PointConv2D((1, 4)),), max_vertices=2)
+    except RuntimeError:
+        assert False
+
+
+def test_deep_copy(basic_graph):
+    complex_operation, vertex1, vertex2, vertex3, vertex4 = basic_graph
+    higher_level = ComplexOperation((complex_operation,),
+                                    initialize_with_identity=False,
+                                    max_vertices=10)
+
+    higher_level_copy = cast(ComplexOperation, higher_level.deep_copy())
+    assert higher_level_copy.max_vertices == 10
+
+    complex_edge = cast(ComplexOperation,
+                        higher_level.input_vertex.out_bound_edges[0])
+    complex_edge_copy = cast(ComplexOperation,
+                             higher_level_copy.input_vertex.out_bound_edges[0])
+    assert (len(complex_edge.vertices_topo_order)
+            == len(complex_edge_copy.vertices_topo_order))
+    for i, vertex in enumerate(complex_edge.vertices_topo_order):
+        for j, edge in enumerate(vertex.out_bound_edges):
+            copy_vertex = complex_edge_copy.vertices_topo_order[i]
+            copy_edge = copy_vertex.out_bound_edges[j]
+            assert copy_edge.end_vertex.order == edge.end_vertex.order
+            assert copy_vertex is not vertex
+            assert copy_edge is not edge
+
+    assert (len(higher_level_copy.available_operations)
+            == len(higher_level.available_operations))
+
+    for i in range(len(higher_level_copy.available_operations)):
+        assert (higher_level_copy.available_operations[i]
+                is not higher_level.available_operations[i])

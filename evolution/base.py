@@ -84,6 +84,10 @@ class Edge(ABC):
     def layers_below(self) -> int:
         pass
 
+    @abstractmethod
+    def deep_copy(self) -> 'Edge':
+        pass
+
 
 class IdentityOperation(Edge):
 
@@ -96,6 +100,9 @@ class IdentityOperation(Edge):
     @property
     def layers_below(self) -> int:
         return 1
+
+    def deep_copy(self) -> 'Edge':
+        return IdentityOperation()
 
 
 class _LayerWrapperMutableChannels(Edge):
@@ -150,6 +157,9 @@ class PointConv2D(_LayerWrapperMutableChannels):
         return keras.layers.Conv2D(kernel_size=(1, 1),
                                    filters=out_channels, padding='same')
 
+    def deep_copy(self) -> 'Edge':
+        return PointConv2D(self.out_channel_range)
+
 
 class SeparableConv2D(_LayerWrapperMutableChannels):
 
@@ -158,11 +168,17 @@ class SeparableConv2D(_LayerWrapperMutableChannels):
                                             filters=out_channels,
                                             padding='same')
 
+    def deep_copy(self) -> 'Edge':
+        return SeparableConv2D(self.out_channel_range)
+
 
 class DepthwiseConv2D(_LayerWrapperImmutableChannels):
 
     def build_layer(self) -> keras.layers.Layer:
         return keras.layers.DepthwiseConv2D(kernel_size=(3, 3), padding='same')
+
+    def deep_copy(self) -> 'Edge':
+        return DepthwiseConv2D()
 
 
 class MaxPool2D(_LayerWrapperImmutableChannels):
@@ -170,11 +186,17 @@ class MaxPool2D(_LayerWrapperImmutableChannels):
     def build_layer(self) -> keras.layers.Layer:
         return keras.layers.MaxPool2D(pool_size=3, padding='same')
 
+    def deep_copy(self) -> 'Edge':
+        return MaxPool2D()
+
 
 class AvePool2D(_LayerWrapperImmutableChannels):
 
     def build_layer(self) -> keras.layers.Layer:
         return keras.layers.AveragePooling2D(pool_size=3, padding='same')
+
+    def deep_copy(self) -> 'Edge':
+        return AvePool2D()
 
 
 class BatchNorm(_LayerWrapperImmutableChannels):
@@ -182,14 +204,23 @@ class BatchNorm(_LayerWrapperImmutableChannels):
     def build_layer(self) -> keras.layers.Layer:
         return keras.layers.BatchNormalization()
 
+    def deep_copy(self) -> 'Edge':
+        return BatchNorm()
+
 
 class ReLU(_LayerWrapperImmutableChannels):
 
     def build_layer(self) -> keras.layers.Layer:
         return keras.layers.ReLU()
 
+    def deep_copy(self) -> 'Edge':
+        return ReLU()
+
 
 class ELU(_LayerWrapperImmutableChannels):
 
     def build_layer(self) -> keras.layers.Layer:
         return keras.layers.ELU()
+
+    def deep_copy(self) -> 'Edge':
+        return ELU()
