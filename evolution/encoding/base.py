@@ -38,6 +38,10 @@ class Vertex(object):
         for out_edge in self.out_bound_edges:
             out_edge.submit(aggregated)
 
+    def add_edge(self, edge: 'Edge', end_vertex: 'Vertex') -> None:
+        edge.end_vertex = end_vertex
+        self.out_bound_edges.append(edge)
+
     def remove_edge(self, edge: 'Edge') -> bool:
         if edge in self.out_bound_edges:
             self.out_bound_edges.remove(edge)

@@ -166,6 +166,11 @@ class ComplexEdge(Edge):
     def invalidate_layer_count(self) -> None:
         self._layers_below = -1
 
+        # Invalidate everything below
+        for vertex in self.vertices_topo_order:
+            for edge in vertex.out_bound_edges:
+                edge.invalidate_layer_count()
+
     def build(self, x: tf.Tensor) -> tf.Tensor:
         for vertex in self.vertices_topo_order:
             vertex.reset()
