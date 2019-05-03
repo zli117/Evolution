@@ -149,16 +149,16 @@ class _LayerWrapperMutableChannels(Edge):
     def __init__(self, out_channel_range: Tuple[int, int]) -> None:
         super().__init__()
         self.out_channel_range = out_channel_range
-        self._layer: keras.layers.Layer = None
+        self.out_channels = 0
         self.mutate()
 
     def mutate(self) -> bool:
-        out_channels = np.random.randint(*self.out_channel_range)
-        self._layer = self.build_layer(out_channels)
+        self.out_channels = np.random.randint(*self.out_channel_range)
         return True
 
     def build(self, x: tf.Tensor) -> tf.Tensor:
-        return self._layer(x)
+        layer = self.build_layer(self.out_channels)
+        return layer(x)
 
     def invalidate_layer_count(self) -> None:
         pass
@@ -176,13 +176,13 @@ class _LayerWrapperImmutableChannels(Edge):
 
     def __init__(self) -> None:
         super().__init__()
-        self._layer: keras.layers.Layer = self.build_layer()
 
     def mutate(self) -> bool:
         return False
 
     def build(self, x: tf.Tensor) -> tf.Tensor:
-        return self._layer(x)
+        layer = self.build_layer()
+        return layer(x)
 
     def invalidate_layer_count(self) -> None:
         pass

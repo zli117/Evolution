@@ -15,7 +15,7 @@ def train_and_eval(edge: Edge, k_folds: int, X: np.array, y: np.array,
     kf = KFold(n_splits=k_folds)
     history = []
     for i, index in enumerate(kf.split(X)):
-        keras.backend.clear_session()
+        # keras.backend.clear_session()
         train_idx, valid_idx = index
         x_train: np.array = X[train_idx]
         x_valid: np.array = X[valid_idx]
