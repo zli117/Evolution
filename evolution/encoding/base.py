@@ -199,7 +199,7 @@ class _LayerWrapperImmutableChannels(Edge):
 class PointConv2D(_LayerWrapperMutableChannels):
 
     def build_layer(self, out_channels: int) -> keras.layers.Layer:
-        return keras.layers.Conv2D(kernel_size=(1, 1),
+        return keras.layers.Conv2D(kernel_size=(1, 1), strides=1,
                                    filters=out_channels, padding='same')
 
     def deep_copy(self) -> 'Edge':
@@ -209,7 +209,7 @@ class PointConv2D(_LayerWrapperMutableChannels):
 class SeparableConv2D(_LayerWrapperMutableChannels):
 
     def build_layer(self, out_channels: int) -> keras.layers.Layer:
-        return keras.layers.SeparableConv2D(kernel_size=(3, 3),
+        return keras.layers.SeparableConv2D(kernel_size=(3, 3), strides=1,
                                             filters=out_channels,
                                             padding='same')
 
@@ -220,7 +220,8 @@ class SeparableConv2D(_LayerWrapperMutableChannels):
 class DepthwiseConv2D(_LayerWrapperImmutableChannels):
 
     def build_layer(self) -> keras.layers.Layer:
-        return keras.layers.DepthwiseConv2D(kernel_size=(3, 3), padding='same')
+        return keras.layers.DepthwiseConv2D(kernel_size=(3, 3), strides=1,
+                                            padding='same')
 
     def deep_copy(self) -> 'Edge':
         return DepthwiseConv2D()
@@ -229,7 +230,7 @@ class DepthwiseConv2D(_LayerWrapperImmutableChannels):
 class MaxPool2D(_LayerWrapperImmutableChannels):
 
     def build_layer(self) -> keras.layers.Layer:
-        return keras.layers.MaxPool2D(pool_size=3, padding='same')
+        return keras.layers.MaxPool2D(pool_size=3, strides=1, padding='same')
 
     def deep_copy(self) -> 'Edge':
         return MaxPool2D()
@@ -238,7 +239,8 @@ class MaxPool2D(_LayerWrapperImmutableChannels):
 class AvePool2D(_LayerWrapperImmutableChannels):
 
     def build_layer(self) -> keras.layers.Layer:
-        return keras.layers.AveragePooling2D(pool_size=3, padding='same')
+        return keras.layers.AveragePooling2D(pool_size=3, strides=1,
+                                             padding='same')
 
     def deep_copy(self) -> 'Edge':
         return AvePool2D()
