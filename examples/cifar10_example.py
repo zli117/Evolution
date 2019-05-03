@@ -39,7 +39,7 @@ class TopLayer(FixedEdge):
         return TopLayer()
 
     def build_graph(self) -> None:
-        conv_edge1 = MutableEdge((MaxPool2D(), BatchNorm(),
+        conv_edge1 = MutableEdge((BatchNorm(),
                                   PointConv2D((20, 40)), DepthwiseConv2D(),
                                   IdentityOperation(),
                                   SeparableConv2D((20, 40)), Dropout(0.25),
@@ -49,7 +49,9 @@ class TopLayer(FixedEdge):
         vertex1 = Vertex(name='V1')
         vertex2 = Vertex(name='V2')
         self.input_vertex.add_edge(conv_edge1, vertex1)
-        vertex1.add_edge(conv_edge2, vertex2)
+        vertex7 = Vertex(name='V7')
+        vertex1.add_edge(MaxPool2D(), vertex7)
+        vertex7.add_edge(conv_edge2, vertex2)
 
         vertex3 = Vertex(name='V3')
         vertex2.add_edge(Flatten(), vertex3)
@@ -76,7 +78,8 @@ if __name__ == '__main__':
         'y_test': y_test,
         'fit_args': {'batch_size': batch_size, 'epochs': epochs,
                      'shuffle': True},
-        'optimizer_factory': lambda: keras.optimizers.Adam(lr=1e-4),
+        'optimizer_factory': lambda: keras.optimizers.RMSprop(lr=1e-4,
+                                                              decay=1e-6),
         'loss': 'categorical_crossentropy',
         'metrics': 'accuracy',
     }

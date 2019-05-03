@@ -230,7 +230,7 @@ class DepthwiseConv2D(_LayerWrapperImmutableChannels):
 class MaxPool2D(_LayerWrapperImmutableChannels):
 
     def build_layer(self) -> keras.layers.Layer:
-        return keras.layers.MaxPool2D(pool_size=3, strides=1, padding='same')
+        return keras.layers.MaxPool2D(pool_size=3, padding='same')
 
     def deep_copy(self) -> 'Edge':
         return MaxPool2D()
@@ -239,7 +239,7 @@ class MaxPool2D(_LayerWrapperImmutableChannels):
 class AvePool2D(_LayerWrapperImmutableChannels):
 
     def build_layer(self) -> keras.layers.Layer:
-        return keras.layers.AveragePooling2D(pool_size=3, strides=1,
+        return keras.layers.AveragePooling2D(pool_size=3,
                                              padding='same')
 
     def deep_copy(self) -> 'Edge':
