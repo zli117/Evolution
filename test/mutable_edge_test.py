@@ -1,62 +1,23 @@
-from typing import Tuple
+from typing import cast
 
-import pytest
+import tensorflow as tf
 
-from natural_selection.base import Edge
-from natural_selection.base import IdentityOperation
-from natural_selection.base import MaxPool2D
-from natural_selection.base import PointConv2D
-from natural_selection.base import Vertex
-from natural_selection.complex_op import ComplexOperation
+from evolution.encoding.base import Edge
+from evolution.encoding.base import IdentityOperation
+from evolution.encoding.base import MaxPool2D
+from evolution.encoding.base import PointConv2D
+from evolution.encoding.base import Vertex
+from evolution.encoding.mutable_edge import MutableEdge
 
 
 def test_complex_op_creation():
-    complex_operation = ComplexOperation((PointConv2D((1, 4)),))
+    complex_operation = MutableEdge((PointConv2D((1, 4)),))
     assert len(complex_operation.available_operations) == 1
     assert len(complex_operation.vertices_topo_order) == 2
     assert (complex_operation.vertices_topo_order[0]
             is complex_operation.output_vertex)
     assert (complex_operation.vertices_topo_order[1]
             is complex_operation.input_vertex)
-
-
-@pytest.fixture
-def basic_graph_no_v12() -> Tuple[ComplexOperation, Vertex, Vertex, Vertex,
-                                  Vertex]:
-    complex_operation = ComplexOperation((PointConv2D((1, 4)), MaxPool2D()))
-    vertex1 = Vertex()
-    vertex2 = Vertex()
-    vertex3 = Vertex()
-    vertex4 = Vertex()
-    edge1 = IdentityOperation()
-    edge2 = IdentityOperation()
-    edge3 = IdentityOperation()
-    edge4 = IdentityOperation()
-    edge5 = IdentityOperation()
-    edge6 = IdentityOperation()
-    complex_operation.input_vertex.out_bound_edges.clear()
-    complex_operation.input_vertex.out_bound_edges.extend([edge1, edge2, edge3])
-    edge1.end_vertex = vertex1
-    edge2.end_vertex = vertex2
-    edge3.end_vertex = vertex4
-    vertex1.out_bound_edges.append(edge6)
-    edge6.end_vertex = complex_operation.output_vertex
-    vertex2.out_bound_edges.append(edge4)
-    edge4.end_vertex = complex_operation.output_vertex
-    vertex3.out_bound_edges.append(edge5)
-    edge5.end_vertex = complex_operation.output_vertex
-
-    return complex_operation, vertex1, vertex2, vertex3, vertex4
-
-
-@pytest.fixture
-def basic_graph(basic_graph_no_v12) -> Tuple[ComplexOperation, Vertex, Vertex,
-                                             Vertex, Vertex]:
-    complex_operation, vertex1, vertex2, vertex3, vertex4 = basic_graph_no_v12
-    edge = IdentityOperation()
-    vertex1.out_bound_edges.append(edge)
-    edge.end_vertex = vertex2
-    return complex_operation, vertex1, vertex2, vertex3, vertex4
 
 
 def test_sort_vertices(basic_graph):
@@ -148,6 +109,31 @@ def test_add_edge2(basic_graph, mocker):
     assert to_vertex2_count == 2
 
 
+class MockEdge(Edge):
+
+    def __init__(self, mutated: bool = True):
+        super().__init__()
+        self.mutated = mutated
+        self.deep_copy_count = 0
+
+    def mutate(self) -> bool:
+        return self.mutated
+
+    def build(self, x: tf.Tensor) -> tf.Tensor:
+        return x
+
+    def invalidate_layer_count(self) -> None:
+        pass
+
+    @property
+    def level(self) -> int:
+        return 1
+
+    def deep_copy(self) -> Edge:
+        self.deep_copy_count += 1
+        return self
+
+
 def test_mutate_edge(basic_graph, mocker):
     complex_operation, vertex1, vertex2, vertex3, vertex4 = basic_graph
 
@@ -155,11 +141,11 @@ def test_mutate_edge(basic_graph, mocker):
     complex_operation.input_vertex.out_bound_edges.append(edge_to_replace)
     edge_to_replace.end_vertex = complex_operation.output_vertex
 
-    new_edge = PointConv2D((2, 3))
+    new_edge = MockEdge()
 
     complex_operation.sort_vertices()
 
-    def mock(*args, **kwargs):
+    def mock(*args, **_):
         if isinstance(args[0][0], Vertex):
             return [complex_operation.input_vertex]
         if edge_to_replace in args[0]:
@@ -175,6 +161,7 @@ def test_mutate_edge(basic_graph, mocker):
     complex_operation.mutation_mutate_edge()
     assert edge_to_replace.end_vertex is None
     assert new_edge in complex_operation.input_vertex.out_bound_edges
+    assert new_edge.deep_copy_count == 1
     assert (len(complex_operation.input_vertex.out_bound_edges)
             == len(before_out_edges) + 1)
 
@@ -184,12 +171,12 @@ def test_mutate_edge(basic_graph, mocker):
 
 
 def test_remove_edge_fail1():
-    complex_operation = ComplexOperation((PointConv2D((1, 4)), MaxPool2D()))
+    complex_operation = MutableEdge((PointConv2D((1, 4)), MaxPool2D()))
     assert not complex_operation.mutation_remove_edge()
 
 
 def test_remove_edge_fail2():
-    complex_operation = ComplexOperation((PointConv2D((1, 4)), MaxPool2D()))
+    complex_operation = MutableEdge((PointConv2D((1, 4)), MaxPool2D()))
     edge1 = IdentityOperation()
     edge2 = IdentityOperation()
     complex_operation.input_vertex.out_bound_edges.clear()
@@ -204,7 +191,7 @@ def test_remove_edge_fail2():
 
 
 def test_remove_edge_success():
-    complex_operation = ComplexOperation((PointConv2D((1, 4)), MaxPool2D()))
+    complex_operation = MutableEdge((PointConv2D((1, 4)), MaxPool2D()))
     edge1 = IdentityOperation()
     edge2 = IdentityOperation()
     complex_operation.input_vertex.out_bound_edges.clear()
@@ -237,10 +224,10 @@ def test_mutation_add_node(basic_graph_no_v12, mocker):
     vertex2.order = min(v1_order, v2_order)
     vertex1.order = max(v1_order, v2_order)
 
-    edge1 = IdentityOperation()
-    edge2 = MaxPool2D()
+    edge1 = MaxPool2D()
+    edge2 = MockEdge()
 
-    def mock(*args, **kwargs):
+    def mock(*args, **_):
         if isinstance(args[0][0], Vertex):
             return [vertex1, vertex2]
         if isinstance(args[0][0], Edge):
@@ -248,9 +235,20 @@ def test_mutation_add_node(basic_graph_no_v12, mocker):
 
     mocker.patch('numpy.random.choice', side_effect=mock)
 
-    complex_operation.mutation_add_node()
+    complex_operation.mutation_add_vertex()
     assert edge2.end_vertex is vertex2
+    assert edge2.deep_copy_count == 1
     assert vertex2.order < vertex1.order
+
+
+def test_mutation_add_node_max_vertex():
+    complex_operation = MutableEdge((PointConv2D((1, 4)),), max_vertices=2)
+    assert not complex_operation.mutation_add_vertex()
+
+    complex_operation = MutableEdge((PointConv2D((1, 4)),), max_vertices=3)
+    assert complex_operation.mutation_add_vertex()
+    assert len(complex_operation.vertices_topo_order) == 3
+    assert not complex_operation.mutation_add_vertex()
 
 
 def test_remove_node_success(basic_graph_no_v12, mocker):
@@ -280,7 +278,7 @@ def test_remove_node_success(basic_graph_no_v12, mocker):
 
 
 def test_remove_node_fail():
-    complex_operation = ComplexOperation((PointConv2D((1, 4)),))
+    complex_operation = MutableEdge((PointConv2D((1, 4)),))
     assert not complex_operation.mutation_remove_vertex()
 
     complex_operation.input_vertex.out_bound_edges.clear()
@@ -301,3 +299,47 @@ def test_remove_node_fail():
     complex_operation.sort_vertices()
     assert len(complex_operation.vertices_topo_order) == 4
     assert not complex_operation.mutation_remove_vertex()
+
+
+def test_max_vertices():
+    try:
+        MutableEdge((PointConv2D((1, 4)),), max_vertices=1)
+        assert False
+    except RuntimeError:
+        pass
+
+    try:
+        MutableEdge((PointConv2D((1, 4)),), max_vertices=2)
+    except RuntimeError:
+        assert False
+
+
+def test_deep_copy(basic_graph):
+    complex_operation, vertex1, vertex2, vertex3, vertex4 = basic_graph
+    higher_level = MutableEdge((complex_operation,),
+                               initialize_with_identity=False,
+                               max_vertices=10)
+
+    higher_level_copy = cast(MutableEdge, higher_level.deep_copy())
+    assert higher_level_copy.max_vertices == 10
+
+    complex_edge = cast(MutableEdge,
+                        higher_level.input_vertex.out_bound_edges[0])
+    complex_edge_copy = cast(MutableEdge,
+                             higher_level_copy.input_vertex.out_bound_edges[0])
+    assert (len(complex_edge.vertices_topo_order)
+            == len(complex_edge_copy.vertices_topo_order))
+    for i, vertex in enumerate(complex_edge.vertices_topo_order):
+        for j, edge in enumerate(vertex.out_bound_edges):
+            copy_vertex = complex_edge_copy.vertices_topo_order[i]
+            copy_edge = copy_vertex.out_bound_edges[j]
+            assert copy_edge.end_vertex.order == edge.end_vertex.order
+            assert copy_vertex is not vertex
+            assert copy_edge is not edge
+
+    assert (len(higher_level_copy.available_operations)
+            == len(higher_level.available_operations))
+
+    for i in range(len(higher_level_copy.available_operations)):
+        assert (higher_level_copy.available_operations[i]
+                is not higher_level.available_operations[i])

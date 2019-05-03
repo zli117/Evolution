@@ -3,19 +3,20 @@ Basic units
 """
 from abc import ABC
 from abc import abstractmethod
-from random import randint
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Callable
 
+import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 
 
 class Vertex(object):
 
-    def __init__(self):
+    def __init__(self, name: str = '') -> None:
         self.out_bound_edges: List['Edge'] = []
         self.collected: List[tf.Tensor] = []
         self.order: int = 0
+        self.name = name
 
     def reset(self) -> None:
         self.collected = []
@@ -24,18 +25,18 @@ class Vertex(object):
         self.collected.append(x)
 
     def aggregate(self) -> tf.Tensor:
-        if not self.collected:
-            # Should throw error
-            pass
-        elif len(self.collected) == 1:
-            return self.collected[0]
-        else:
-            return keras.layers.concatenate(self.collected)
+        with tf.name_scope('%s' % self.name):
+            if not self.collected:
+                raise RuntimeError('Nothing collected at vertex %s' % self.name)
+            elif len(self.collected) == 1:
+                return self.collected[0]
+            else:
+                return keras.layers.concatenate(self.collected)
 
     def submit(self) -> None:
         aggregated = self.aggregate()
         for out_edge in self.out_bound_edges:
-            out_edge.build(aggregated)
+            out_edge.submit(aggregated)
 
     def remove_edge(self, edge: 'Edge') -> bool:
         if edge in self.out_bound_edges:
@@ -76,12 +77,20 @@ class Edge(ABC):
         pass
 
     @abstractmethod
+    def invalidate_layer_count(self) -> None:
+        pass
+
+    @abstractmethod
     def build(self, x: tf.Tensor) -> tf.Tensor:
         pass
 
     @property
     @abstractmethod
-    def layers_below(self) -> int:
+    def level(self) -> int:
+        pass
+
+    @abstractmethod
+    def deep_copy(self) -> 'Edge':
         pass
 
 
@@ -93,9 +102,42 @@ class IdentityOperation(Edge):
     def build(self, x: tf.Tensor) -> tf.Tensor:
         return x
 
+    def invalidate_layer_count(self) -> None:
+        pass
+
     @property
-    def layers_below(self) -> int:
+    def level(self) -> int:
         return 1
+
+    def deep_copy(self) -> Edge:
+        return IdentityOperation()
+
+
+class LambdaEdge(Edge):
+    """
+    If this edge can change the shape of the tensor and used as an option for
+    mutation, could potentially break the graph.
+    """
+
+    def __init__(self, function: Callable[[tf.Tensor], tf.Tensor]) -> None:
+        super().__init__()
+        self.function = function
+
+    def mutate(self) -> bool:
+        return False
+
+    def invalidate_layer_count(self) -> None:
+        pass
+
+    def build(self, x: tf.Tensor) -> tf.Tensor:
+        return self.function(x)
+
+    @property
+    def level(self) -> int:
+        return 1
+
+    def deep_copy(self) -> Edge:
+        return LambdaEdge(self.function)
 
 
 class _LayerWrapperMutableChannels(Edge):
@@ -107,15 +149,18 @@ class _LayerWrapperMutableChannels(Edge):
         self.mutate()
 
     def mutate(self) -> bool:
-        out_channels = randint(*self.out_channel_range)
+        out_channels = np.random.randint(*self.out_channel_range)
         self._layer = self.build_layer(out_channels)
         return True
 
     def build(self, x: tf.Tensor) -> tf.Tensor:
         return self._layer(x)
 
+    def invalidate_layer_count(self) -> None:
+        pass
+
     @property
-    def layers_below(self) -> int:
+    def level(self) -> int:
         return 1
 
     @abstractmethod
@@ -135,8 +180,11 @@ class _LayerWrapperImmutableChannels(Edge):
     def build(self, x: tf.Tensor) -> tf.Tensor:
         return self._layer(x)
 
+    def invalidate_layer_count(self) -> None:
+        pass
+
     @property
-    def layers_below(self) -> int:
+    def level(self) -> int:
         return 1
 
     @abstractmethod
@@ -150,6 +198,9 @@ class PointConv2D(_LayerWrapperMutableChannels):
         return keras.layers.Conv2D(kernel_size=(1, 1),
                                    filters=out_channels, padding='same')
 
+    def deep_copy(self) -> 'Edge':
+        return PointConv2D(self.out_channel_range)
+
 
 class SeparableConv2D(_LayerWrapperMutableChannels):
 
@@ -158,11 +209,17 @@ class SeparableConv2D(_LayerWrapperMutableChannels):
                                             filters=out_channels,
                                             padding='same')
 
+    def deep_copy(self) -> 'Edge':
+        return SeparableConv2D(self.out_channel_range)
+
 
 class DepthwiseConv2D(_LayerWrapperImmutableChannels):
 
     def build_layer(self) -> keras.layers.Layer:
         return keras.layers.DepthwiseConv2D(kernel_size=(3, 3), padding='same')
+
+    def deep_copy(self) -> 'Edge':
+        return DepthwiseConv2D()
 
 
 class MaxPool2D(_LayerWrapperImmutableChannels):
@@ -170,11 +227,17 @@ class MaxPool2D(_LayerWrapperImmutableChannels):
     def build_layer(self) -> keras.layers.Layer:
         return keras.layers.MaxPool2D(pool_size=3, padding='same')
 
+    def deep_copy(self) -> 'Edge':
+        return MaxPool2D()
+
 
 class AvePool2D(_LayerWrapperImmutableChannels):
 
     def build_layer(self) -> keras.layers.Layer:
         return keras.layers.AveragePooling2D(pool_size=3, padding='same')
+
+    def deep_copy(self) -> 'Edge':
+        return AvePool2D()
 
 
 class BatchNorm(_LayerWrapperImmutableChannels):
@@ -182,14 +245,53 @@ class BatchNorm(_LayerWrapperImmutableChannels):
     def build_layer(self) -> keras.layers.Layer:
         return keras.layers.BatchNormalization()
 
+    def deep_copy(self) -> 'Edge':
+        return BatchNorm()
+
 
 class ReLU(_LayerWrapperImmutableChannels):
 
     def build_layer(self) -> keras.layers.Layer:
         return keras.layers.ReLU()
 
+    def deep_copy(self) -> 'Edge':
+        return ReLU()
+
 
 class ELU(_LayerWrapperImmutableChannels):
 
     def build_layer(self) -> keras.layers.Layer:
         return keras.layers.ELU()
+
+    def deep_copy(self) -> 'Edge':
+        return ELU()
+
+
+class Flatten(_LayerWrapperImmutableChannels):
+    """
+    This edge will change the shape of the tensor. If used as an option for
+    mutation, could potentially break the graph.
+    """
+
+    def build_layer(self) -> keras.layers.Layer:
+        return keras.layers.Flatten()
+
+    def deep_copy(self) -> 'Edge':
+        return ELU()
+
+
+class Dense(_LayerWrapperImmutableChannels):
+    """
+    This edge will change the shape of the tensor. If used as an option for
+    mutation, could potentially break the graph.
+    """
+
+    def __init__(self, units: int) -> None:
+        self.units = units
+        super().__init__()
+
+    def build_layer(self) -> keras.layers.Layer:
+        return keras.layers.Dense(self.units)
+
+    def deep_copy(self) -> 'Edge':
+        return ELU()

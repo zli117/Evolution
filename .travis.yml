@@ -1,11 +1,14 @@
 dist: xenial
 language: python
-python: 3.7
+python:
+  - "3.7"
+  - "3.6"
 install:
   - pip install --upgrade pip
   - pip install --progress-bar off -r requirements.txt
 
 script:
-  - pytest
+  - python3 -m pytest test/
   - pycodestyle --max-line-length=80 --count --statistics .
-  - mypy natural_selection/ --disallow-incomplete-defs
+  - mypy evolution/ --disallow-incomplete-defs
+  - mypy examples/ --disallow-incomplete-defs
