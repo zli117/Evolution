@@ -12,7 +12,7 @@ from evolution.encoding.complex_edge import ComplexEdge
 class MutationStrategy(ABC):
 
     @abstractmethod
-    def mutate(self, edge_to_mutate: ComplexEdge) -> bool:
+    def __call__(self, edge_to_mutate: ComplexEdge) -> bool:
         pass
 
 
@@ -54,11 +54,12 @@ class MutateOneLayer(MutationStrategy):
         # Try edges in random order until there's one we can mutate
         for edge in np.random.permutation(edges_of_level):
             if edge.mutate():
+                edge.invalidate_layer_count()
                 return True
 
         return False
 
-    def mutate(self, root_edge: ComplexEdge) -> bool:
+    def __call__(self, root_edge: ComplexEdge) -> bool:
         for level in np.random.permutation(range(1, root_edge.level + 1)):
             if self._mutate_one_level(root_edge, level):
                 return True

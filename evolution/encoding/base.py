@@ -38,6 +38,10 @@ class Vertex(object):
         for out_edge in self.out_bound_edges:
             out_edge.submit(aggregated)
 
+    def add_edge(self, edge: 'Edge', end_vertex: 'Vertex') -> None:
+        edge.end_vertex = end_vertex
+        self.out_bound_edges.append(edge)
+
     def remove_edge(self, edge: 'Edge') -> bool:
         if edge in self.out_bound_edges:
             self.out_bound_edges.remove(edge)
@@ -145,16 +149,16 @@ class _LayerWrapperMutableChannels(Edge):
     def __init__(self, out_channel_range: Tuple[int, int]) -> None:
         super().__init__()
         self.out_channel_range = out_channel_range
-        self._layer: keras.layers.Layer = None
+        self.out_channels = 0
         self.mutate()
 
     def mutate(self) -> bool:
-        out_channels = np.random.randint(*self.out_channel_range)
-        self._layer = self.build_layer(out_channels)
+        self.out_channels = np.random.randint(*self.out_channel_range)
         return True
 
     def build(self, x: tf.Tensor) -> tf.Tensor:
-        return self._layer(x)
+        layer = self.build_layer(self.out_channels)
+        return layer(x)
 
     def invalidate_layer_count(self) -> None:
         pass
@@ -172,13 +176,13 @@ class _LayerWrapperImmutableChannels(Edge):
 
     def __init__(self) -> None:
         super().__init__()
-        self._layer: keras.layers.Layer = self.build_layer()
 
     def mutate(self) -> bool:
         return False
 
     def build(self, x: tf.Tensor) -> tf.Tensor:
-        return self._layer(x)
+        layer = self.build_layer()
+        return layer(x)
 
     def invalidate_layer_count(self) -> None:
         pass
@@ -195,7 +199,7 @@ class _LayerWrapperImmutableChannels(Edge):
 class PointConv2D(_LayerWrapperMutableChannels):
 
     def build_layer(self, out_channels: int) -> keras.layers.Layer:
-        return keras.layers.Conv2D(kernel_size=(1, 1),
+        return keras.layers.Conv2D(kernel_size=(1, 1), strides=1,
                                    filters=out_channels, padding='same')
 
     def deep_copy(self) -> 'Edge':
@@ -205,7 +209,7 @@ class PointConv2D(_LayerWrapperMutableChannels):
 class SeparableConv2D(_LayerWrapperMutableChannels):
 
     def build_layer(self, out_channels: int) -> keras.layers.Layer:
-        return keras.layers.SeparableConv2D(kernel_size=(3, 3),
+        return keras.layers.SeparableConv2D(kernel_size=(3, 3), strides=1,
                                             filters=out_channels,
                                             padding='same')
 
@@ -216,7 +220,8 @@ class SeparableConv2D(_LayerWrapperMutableChannels):
 class DepthwiseConv2D(_LayerWrapperImmutableChannels):
 
     def build_layer(self) -> keras.layers.Layer:
-        return keras.layers.DepthwiseConv2D(kernel_size=(3, 3), padding='same')
+        return keras.layers.DepthwiseConv2D(kernel_size=(3, 3), strides=1,
+                                            padding='same')
 
     def deep_copy(self) -> 'Edge':
         return DepthwiseConv2D()
@@ -234,7 +239,8 @@ class MaxPool2D(_LayerWrapperImmutableChannels):
 class AvePool2D(_LayerWrapperImmutableChannels):
 
     def build_layer(self) -> keras.layers.Layer:
-        return keras.layers.AveragePooling2D(pool_size=3, padding='same')
+        return keras.layers.AveragePooling2D(pool_size=3,
+                                             padding='same')
 
     def deep_copy(self) -> 'Edge':
         return AvePool2D()
@@ -277,7 +283,7 @@ class Flatten(_LayerWrapperImmutableChannels):
         return keras.layers.Flatten()
 
     def deep_copy(self) -> 'Edge':
-        return ELU()
+        return Flatten()
 
 
 class Dense(_LayerWrapperImmutableChannels):
@@ -294,4 +300,21 @@ class Dense(_LayerWrapperImmutableChannels):
         return keras.layers.Dense(self.units)
 
     def deep_copy(self) -> 'Edge':
-        return ELU()
+        return Dense(self.units)
+
+
+class Dropout(_LayerWrapperImmutableChannels):
+    """
+    This edge will change the shape of the tensor. If used as an option for
+    mutation, could potentially break the graph.
+    """
+
+    def __init__(self, rate: float) -> None:
+        self.rate = rate
+        super().__init__()
+
+    def build_layer(self) -> keras.layers.Layer:
+        return keras.layers.Dropout(self.rate)
+
+    def deep_copy(self) -> 'Edge':
+        return Dropout(self.rate)

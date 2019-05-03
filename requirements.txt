@@ -4,4 +4,5 @@ pycodestyle==2.5.0
 mypy==0.670
 tensorflow
 pytest-mock==1.10.4
+scikit-learn==0.20.3
 numpy
