@@ -299,3 +299,20 @@ class Dense(_LayerWrapperImmutableChannels):
 
     def deep_copy(self) -> 'Edge':
         return ELU()
+
+
+class Dropout(_LayerWrapperImmutableChannels):
+    """
+    This edge will change the shape of the tensor. If used as an option for
+    mutation, could potentially break the graph.
+    """
+
+    def __init__(self, rate: float) -> None:
+        self.rate = rate
+        super().__init__()
+
+    def build_layer(self) -> keras.layers.Layer:
+        return keras.layers.Dropout(self.rate)
+
+    def deep_copy(self) -> 'Edge':
+        return ELU()
