@@ -283,7 +283,7 @@ class Flatten(_LayerWrapperImmutableChannels):
         return keras.layers.Flatten()
 
     def deep_copy(self) -> 'Edge':
-        return ELU()
+        return Flatten()
 
 
 class Dense(_LayerWrapperImmutableChannels):
@@ -300,7 +300,7 @@ class Dense(_LayerWrapperImmutableChannels):
         return keras.layers.Dense(self.units)
 
     def deep_copy(self) -> 'Edge':
-        return ELU()
+        return Dense(self.units)
 
 
 class Dropout(_LayerWrapperImmutableChannels):
@@ -317,4 +317,4 @@ class Dropout(_LayerWrapperImmutableChannels):
         return keras.layers.Dropout(self.rate)
 
     def deep_copy(self) -> 'Edge':
-        return ELU()
+        return Dropout(self.rate)
