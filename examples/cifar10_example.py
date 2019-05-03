@@ -68,7 +68,7 @@ if __name__ == '__main__':
         'k_folds': 3,
         'X': x_train,
         'y': y_train,
-        'x_test': x_test,
+        'X_test': x_test,
         'y_test': y_test,
         'fit_args': {'batch_size': batch_size, 'epochs': epochs,
                      'shuffle': True},
