@@ -4,6 +4,8 @@ Evolution algorithm for model architecture search
 
 ## Features
 
-  - [ ] Supports Keras
-  - [ ] Supports custom module
-  - [ ] Visualization
+  - [X] Supports Keras
+  - [X] Supports custom module
+  - [X] Visualization
+  - [ ] Load balancing
+  - [ ] Multi GPU
