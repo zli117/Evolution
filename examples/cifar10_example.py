@@ -19,7 +19,7 @@ from evolution.evolve.mutation_strategy import MutateOneLayer
 
 batch_size = 32
 num_classes = 10
-epochs = 50
+epochs = 20
 
 (x_train, y_train), (x_test, y_test) = keras.datasets.cifar10.load_data()
 print('x_train shape:', x_train.shape)
@@ -32,6 +32,9 @@ y_test = keras.utils.to_categorical(y_test, num_classes)
 
 class TopLayer(FixedEdge):
 
+    def __init__(self) -> None:
+        super().__init__(name='TopLayer')
+
     def construct_new_instance(self) -> 'FixedEdge':
         return TopLayer()
 
@@ -40,7 +43,7 @@ class TopLayer(FixedEdge):
                                   PointConv2D((20, 40)), DepthwiseConv2D(),
                                   IdentityOperation(),
                                   SeparableConv2D((20, 40)), Dropout(0.25),
-                                  ReLU()))
+                                  ReLU()), max_vertices=10)
         conv_edge2 = conv_edge1.deep_copy()
         vertex1 = Vertex(name='V1')
         vertex2 = Vertex(name='V2')
