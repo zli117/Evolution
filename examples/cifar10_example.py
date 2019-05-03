@@ -19,7 +19,7 @@ from evolution.evolve.mutation_strategy import MutateOneLayer
 
 batch_size = 32
 num_classes = 10
-epochs = 100
+epochs = 50
 
 (x_train, y_train), (x_test, y_test) = keras.datasets.cifar10.load_data()
 print('x_train shape:', x_train.shape)
