@@ -8,7 +8,7 @@ install:
   - pip install --progress-bar off -r requirements.txt
 
 script:
-  - pytest
+  - python3 -m pytest test/
   - pycodestyle --max-line-length=80 --count --statistics .
   - mypy evolution/ --disallow-incomplete-defs
   - mypy examples/ --disallow-incomplete-defs
