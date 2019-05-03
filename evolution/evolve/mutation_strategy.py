@@ -12,7 +12,7 @@ from evolution.encoding.complex_edge import ComplexEdge
 class MutationStrategy(ABC):
 
     @abstractmethod
-    def mutate(self, edge_to_mutate: ComplexEdge) -> None:
+    def mutate(self, edge_to_mutate: ComplexEdge) -> bool:
         pass
 
 
@@ -44,8 +44,7 @@ class MutateOneLayer(MutationStrategy):
                 edges_of_level.append(current)
             if current.level == 1:
                 continue
-            current: ComplexEdge = cast(ComplexEdge, current)
-            for vertex in current.vertices_topo_order:
+            for vertex in cast(ComplexEdge, current).vertices_topo_order:
                 for edge in vertex.out_bound_edges:
                     if edge in visited_set:
                         continue
