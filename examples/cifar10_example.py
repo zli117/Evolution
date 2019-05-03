@@ -43,7 +43,8 @@ class TopLayer(FixedEdge):
                                   PointConv2D((20, 40)), DepthwiseConv2D(),
                                   IdentityOperation(),
                                   SeparableConv2D((20, 40)), Dropout(0.25),
-                                  ReLU()), max_vertices=10)
+                                  ReLU()), max_vertices=10,
+                                 initialize_with_identity=False)
         conv_edge2 = conv_edge1.deep_copy()
         vertex1 = Vertex(name='V1')
         vertex2 = Vertex(name='V2')
