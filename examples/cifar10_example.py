@@ -54,10 +54,9 @@ class TopLayer(FixedEdge):
         vertex5 = Vertex(name='V5')
         vertex4.add_edge(ReLU(), vertex5)
         vertex6 = Vertex(name='V6')
-        vertex7 = Vertex(name='V7')
 
-        vertex6.add_edge(Dropout(0.5), vertex7)
-        vertex7.add_edge(Dense(num_classes), self.output_vertex)
+        vertex5.add_edge(Dropout(0.5), vertex6)
+        vertex6.add_edge(Dense(num_classes), self.output_vertex)
 
     def build(self, x: tf.Tensor) -> tf.Tensor:
         logit = super().build(x)
