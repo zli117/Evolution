@@ -1,3 +1,6 @@
+import argparse
+from typing import Optional
+
 import tensorflow as tf
 from tensorflow import keras
 
@@ -70,6 +73,24 @@ class TopLayer(FixedEdge):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='Example for evolving a neural net on cifar10 dataset')
+    parser.add_argument('-p', type=int, default=20, help='Population size')
+    parser.add_argument('-i', type=int, default=10,
+                        help='Number of evolution iterations')
+    parser.add_argument('-s', type=int, default=5,
+                        help='Sample how many individuals in each iteration')
+    parser.add_argument('-o', type=str, required=True,
+                        help='Log directory path')
+
+    args: Optional[argparse.Namespace] = None
+
+    try:
+        args = parser.parse_args()
+    except argparse.ArgumentError:
+        parser.print_help()
+        exit(1)
+
     train_eval_args = {
         'k_folds': 3,
         'X': x_train,
@@ -82,7 +103,8 @@ if __name__ == '__main__':
                                                               decay=1e-6),
         'loss': 'categorical_crossentropy',
         'metrics': 'accuracy',
+        'log_dir': args.l,
     }
-    model, performance = aging_evolution(20, 10, 5, TopLayer(),
+    model, performance = aging_evolution(args.p, args.i, args.s, TopLayer(),
                                          MutateOneLayer(), train_eval_args)
     print('Best accuracy:', performance)
