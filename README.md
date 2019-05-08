@@ -1,4 +1,4 @@
-# Evolution [![Build Status](https://travis-ci.com/zli117/Natural-Selection.svg?token=j4y2W3bQxnm7LkxGR6Um&branch=master)](https://travis-ci.com/zli117/Natural-Selection)
+# Evolution [![Build Status](https://travis-ci.com/zli117/Evolution.svg?token=j4y2W3bQxnm7LkxGR6Um&branch=master)](https://travis-ci.com/zli117/Evolution)
 Evolve a neural net from scratch
 
 
