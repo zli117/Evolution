@@ -75,7 +75,7 @@ And invariants for the class properties:
 
 This invariants are thoroughly tested in the corresponding unit tests
 [test/complex_edge_test.py](test/complex_edge_test.py) and 
-[test/mutatble_edge_test.py](test/mutatble_edge_test.py). For more 
+[test/mutatble_edge_test.py](test/mutable_edge_test.py). For more 
 details about the hierarchical graph, take a look at Figure 1 in 
 (Lui et al., 2017) for an illustration.
 
