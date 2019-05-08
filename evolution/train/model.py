@@ -11,7 +11,7 @@ from evolution.encoding.base import Edge
 def train_and_eval(edge: Edge, k_folds: int, X: np.array, y: np.array,
                    X_test: np.array, y_test: np.array, fit_args: Dict[str, Any],
                    optimizer_factory: Callable[[], keras.optimizers.Optimizer],
-                   loss: str, metrics: str, name: str) -> float:
+                   loss: str, metrics: str, name: str, log_dir: str) -> float:
     kf = KFold(n_splits=k_folds)
     history = []
     for i, index in enumerate(kf.split(X)):
@@ -31,7 +31,7 @@ def train_and_eval(edge: Edge, k_folds: int, X: np.array, y: np.array,
         tensor_board = keras.callbacks.TensorBoard(batch_size=10,
                                                    write_graph=True,
                                                    log_dir=os.path.join(
-                                                       os.path.join('logs',
+                                                       os.path.join(log_dir,
                                                                     name),
                                                        'cv_%d' % i))
 
