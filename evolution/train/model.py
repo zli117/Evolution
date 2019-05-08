@@ -1,4 +1,5 @@
 import os
+from abc import ABC, abstractmethod
 from typing import Dict, Any, Callable
 
 import numpy as np
@@ -6,6 +7,15 @@ from sklearn.model_selection import KFold
 from tensorflow import keras
 
 from evolution.encoding.base import Edge
+
+
+class BaseTrainer(ABC):
+    def __init__(self, higher_level_model: Edge) -> None:
+        self.higher_level_model = higher_level_model
+
+    @abstractmethod
+    def train_and_eval(self) -> float:
+        pass
 
 
 def train_and_eval(edge: Edge, k_folds: int, X: np.array, y: np.array,
