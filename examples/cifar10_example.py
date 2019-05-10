@@ -16,6 +16,7 @@ from evolution.encoding.fixed_edge import FixedEdge
 from evolution.encoding.mutable_edge import MutableEdge
 from evolution.evolve.evolve_strategy import aging_evolution
 from evolution.evolve.mutation_strategy import MutateOneLayer
+from evolution.train.model import Trainer
 
 batch_size = 32
 num_classes = 10
@@ -69,20 +70,29 @@ class TopLayer(FixedEdge):
         return keras.layers.Activation('softmax')(logit)
 
 
+class Cifar10Trainer(Trainer):
+
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+
+    def optimizer_factory(self) -> keras.optimizers.Optimizer:
+        return keras.optimizers.RMSprop(lr=1e-4, decay=1e-6)
+
+
 if __name__ == '__main__':
     train_eval_args = {
         'k_folds': 3,
+        'num_process': 3,
         'X': x_train,
         'y': y_train,
         'X_test': x_test,
         'y_test': y_test,
         'fit_args': {'batch_size': batch_size, 'epochs': epochs,
                      'shuffle': True},
-        'optimizer_factory': lambda: keras.optimizers.RMSprop(lr=1e-4,
-                                                              decay=1e-6),
         'loss': 'categorical_crossentropy',
         'metrics': 'accuracy',
     }
     model, performance = aging_evolution(20, 10, 5, TopLayer(),
-                                         MutateOneLayer(), train_eval_args)
+                                         MutateOneLayer(),
+                                         Cifar10Trainer(**train_eval_args))
     print('Best accuracy:', performance)
