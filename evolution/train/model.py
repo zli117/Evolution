@@ -75,8 +75,12 @@ class Trainer(BaseTrainer):
                                                  verbose=1)
                 return test_metrics
 
+        def test(param):
+            return 1
+
         with Pool(self.num_process) as pool:
-            history = list(pool.map(worker, self._data_generator()))
+            # history = list(pool.map(worker, self._data_generator()))
+            history = list(pool.map(test, self._data_generator()))
             return float(np.mean(history))
 
     def optimizer_factory(self) -> keras.optimizers.Optimizer:
