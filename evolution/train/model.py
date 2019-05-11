@@ -36,9 +36,11 @@ class Trainer(BaseTrainer):
     loss: Any
     metrics: Any
 
-    def _data_generator(self) -> Generator[Tuple[np.array, np.array,
-                                                 np.array, np.array, int],
-                                           None, None]:
+    def _data_generator(self, edge: Edge,
+                        name: str) -> Generator[Tuple[np.array, np.array,
+                                                      np.array, np.array, Edge,
+                                                      str],
+                                                None, None]:
         kf = KFold(n_splits=self.k_folds)
         for i, index in enumerate(kf.split(self.x_train)):
             train_idx, valid_idx = index
@@ -46,11 +48,12 @@ class Trainer(BaseTrainer):
             x_valid: np.array = self.x_train[valid_idx]
             y_train: np.array = self.y_train[train_idx]
             y_valid: np.array = self.y_train[valid_idx]
-            yield x_train, x_valid, y_train, y_valid, i
+            yield (x_train, x_valid, y_train, y_valid, edge,
+                   os.path.join(os.path.join('logs', name), 'cv_%d' % i))
 
     def _worker(self, param: Tuple[np.array, np.array, np.array, np.array,
-                                   int]) -> float:
-        x_train, x_valid, y_train, y_valid, cv_iter = param
+                                   Edge, str]) -> float:
+        x_train, x_valid, y_train, y_valid, edge, name = param
         gpu_options = tf.GPUOptions(
             per_process_gpu_memory_fraction=1 / self.num_process)
         with tf.Session(
@@ -61,8 +64,7 @@ class Trainer(BaseTrainer):
             model = keras.Model(inputs=input_tensor, outputs=out)
             tensor_board = keras.callbacks.TensorBoard(
                 batch_size=10, write_graph=True,
-                log_dir=os.path.join(os.path.join('logs', name),
-                                     'cv_%d' % cv_iter))
+                log_dir=name)
 
             model.compile(loss=self.loss,
                           optimizer=self.optimizer_factory(),
@@ -76,12 +78,9 @@ class Trainer(BaseTrainer):
 
     def train_and_eval(self, edge: Edge, name: str) -> float:
         with Pool(self.num_process) as pool:
-            history = list(pool.map(self._worker, self._data_generator()))
-            # history = list(pool.map(self.test, self._data_generator()))
+            history = list(
+                pool.map(self._worker, self._data_generator(edge, name)))
             return float(np.mean(history))
-
-    def test(self, param):
-        return 1
 
     def optimizer_factory(self) -> keras.optimizers.Optimizer:
         return keras.optimizers.Adam()
