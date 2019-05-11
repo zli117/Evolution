@@ -1,3 +1,5 @@
+from typing import Dict, Any
+
 import tensorflow as tf
 from tensorflow import keras
 
@@ -72,7 +74,7 @@ class TopLayer(FixedEdge):
 
 class Cifar10Trainer(Trainer):
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: Dict[str, Any]) -> None:
         super().__init__(**kwargs)
 
     def optimizer_factory(self) -> keras.optimizers.Optimizer:
