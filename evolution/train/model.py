@@ -23,6 +23,8 @@ class BaseTrainer(ABC):
     def optimizer_factory(self) -> keras.optimizers.Optimizer:
         pass
 
+def test(param):
+    return 1
 
 @dataclass
 class Trainer(BaseTrainer):
@@ -74,9 +76,6 @@ class Trainer(BaseTrainer):
                 _, test_metrics = model.evaluate(self.x_valid, self.y_valid,
                                                  verbose=1)
                 return test_metrics
-
-        def test(param):
-            return 1
 
         with Pool(self.num_process) as pool:
             # history = list(pool.map(worker, self._data_generator()))
