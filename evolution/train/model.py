@@ -65,10 +65,8 @@ class Trainer(BaseTrainer):
                     log_dir=os.path.join(os.path.join('logs', name),
                                          'cv_%d' % cv_iter))
 
-                optimizer_factory = self.optimizer_factory
-
                 model.compile(loss=self.loss,
-                              optimizer=optimizer_factory(),
+                              optimizer=self.optimizer_factory(),
                               metrics=[self.metrics])
                 model.fit(x_train, y_train, validation_data=(x_valid, y_valid),
                           callbacks=[tensor_board], **self.fit_args)
