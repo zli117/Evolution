@@ -48,36 +48,36 @@ class Trainer(BaseTrainer):
             y_valid: np.array = self.y_train[valid_idx]
             yield x_train, x_valid, y_train, y_valid, i
 
+    def _worker(self, param: Tuple[np.array, np.array, np.array, np.array,
+                                   int]) -> float:
+        x_train, x_valid, y_train, y_valid, cv_iter = param
+        gpu_options = tf.GPUOptions(
+            per_process_gpu_memory_fraction=1 / self.num_process)
+        with tf.Session(
+                config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
+            keras.backend.set_session(sess)
+            input_tensor = keras.Input(shape=x_train.shape[1:])
+            out = edge.build(input_tensor)
+            model = keras.Model(inputs=input_tensor, outputs=out)
+            tensor_board = keras.callbacks.TensorBoard(
+                batch_size=10, write_graph=True,
+                log_dir=os.path.join(os.path.join('logs', name),
+                                     'cv_%d' % cv_iter))
+
+            model.compile(loss=self.loss,
+                          optimizer=self.optimizer_factory(),
+                          metrics=[self.metrics])
+            model.fit(x_train, y_train, validation_data=(x_valid, y_valid),
+                      callbacks=[tensor_board], **self.fit_args)
+
+            _, test_metrics = model.evaluate(self.x_valid, self.y_valid,
+                                             verbose=1)
+            return test_metrics
+
     def train_and_eval(self, edge: Edge, name: str) -> float:
-        def worker(param: Tuple[np.array, np.array, np.array, np.array,
-                                int]) -> float:
-            x_train, x_valid, y_train, y_valid, cv_iter = param
-            gpu_options = tf.GPUOptions(
-                per_process_gpu_memory_fraction=1 / self.num_process)
-            with tf.Session(
-                    config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
-                keras.backend.set_session(sess)
-                input_tensor = keras.Input(shape=x_train.shape[1:])
-                out = edge.build(input_tensor)
-                model = keras.Model(inputs=input_tensor, outputs=out)
-                tensor_board = keras.callbacks.TensorBoard(
-                    batch_size=10, write_graph=True,
-                    log_dir=os.path.join(os.path.join('logs', name),
-                                         'cv_%d' % cv_iter))
-
-                model.compile(loss=self.loss,
-                              optimizer=self.optimizer_factory(),
-                              metrics=[self.metrics])
-                model.fit(x_train, y_train, validation_data=(x_valid, y_valid),
-                          callbacks=[tensor_board], **self.fit_args)
-
-                _, test_metrics = model.evaluate(self.x_valid, self.y_valid,
-                                                 verbose=1)
-                return test_metrics
-
         with Pool(self.num_process) as pool:
-            # history = list(pool.map(worker, self._data_generator()))
-            history = list(pool.map(self.test, self._data_generator()))
+            history = list(pool.map(self._worker, self._data_generator()))
+            # history = list(pool.map(self.test, self._data_generator()))
             return float(np.mean(history))
 
     def test(self, param):
