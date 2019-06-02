@@ -42,13 +42,13 @@ fixed input shape (`32 x 32 x 3` for CIFAR10 for example) and fixed
 output shape (`10` for CIFAR10), it's challenging to make sure each
 layer has a correct set of parameters.
 
-To make things even worse, there are special connections such as skip
+Further, there are special connections such as skip
 connections for residual learning. Normally, neural nets layers 
-follows a nice sequential order, meaning that each layer's output will
+follow a nice sequential order, meaning that each layer's output will
 only go to the next layer, and each layer will only take input from the
 previous layer. However, as (He et al., 2016) introduced residual 
 learning to deep convolution network, the connection are not
-as simple as sequential anymore. The requires the encoding scheme to be
+as simple as sequential anymore. This requires the encoding scheme to be
 flexible enough to accommodate skip connections. 
 
 There are several papers describing ways to encode network 
@@ -59,10 +59,10 @@ instance, to ensure the encoded architecture is valid, I enforced
 several graph invariants on the higher level edges
 (in [evolution/encoding/complex_edge.py](evolution/encoding/complex_edge.py)):
 
-* The graph has no circle 
-* Output is always reachable from input (implied from 3)
-* All the vertices should be reachable from input
-* All the vertices could reach output
+1. The graph has no circle 
+2. Output is always reachable from input (implied from 3)
+3. All the vertices should be reachable from input
+4. All the vertices could reach output
 
 And invariants for the class properties:
 
@@ -73,7 +73,7 @@ And invariants for the class properties:
 * Each edge's `end_vertex` should point to the the end vertex of this
   edge, when the edge is in the graph
 
-This invariants are thoroughly tested in the corresponding unit tests
+These invariants are thoroughly tested in the corresponding unit tests
 [test/complex_edge_test.py](test/complex_edge_test.py) and 
 [test/mutatble_edge_test.py](test/mutable_edge_test.py). For more 
 details about the hierarchical graph, take a look at Figure 1 in 
