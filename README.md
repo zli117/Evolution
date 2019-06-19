@@ -84,7 +84,7 @@ details about the hierarchical graph, take a look at Figure 1 in
 1. Install the dependencies in `run-requirements.txt` by
    `pip3 install -r run-requirements.txt`. Note that if you have Nvidia 
    GPU, you should manually install Tensorflow with GPU instead.
-2. Then run the CIFAR10 example: `python3 -m examples.cifar10 -o logs`
+2. Run the CIFAR10 example: `python3 -m examples.cifar10 -o logs`
    under project root directory.
 3. Start Tensorboard: `tensorboard --logdir logs` to observe progress, 
    and visualize models.
