@@ -89,11 +89,12 @@ if __name__ == '__main__':
         'y_train': y_train,
         'x_valid': x_test,
         'y_valid': y_test,
-        'fit_args': {'batch_size': batch_size, 'epochs': epochs,
-                     'shuffle': True},
+        'fit_args': {'batch_size': batch_size,
+                     'epochs': epochs,
+                     'shuffle': True,
+                     'verbose': 0},
         'loss': 'categorical_crossentropy',
-        'metrics': 'accuracy',
-    }
+        'metrics': 'accuracy', }
     model, performance = aging_evolution(20, 10, 5, TopLayer(),
                                          MutateOneLayer(),
                                          Cifar10Trainer(**train_eval_args))
