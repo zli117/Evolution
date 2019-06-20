@@ -14,9 +14,9 @@ Evolve a neural net from scratch
 ## How it works
 In order to evolve a neural network, we need to solve two problems:
 
-1. We need to represent the network architecture in a way that can
+1. Representing the network architecture in a way that can
    be easily changed
-2. We need to find an algorithm to decide on when should we mutate a
+2. Finding an algorithm to decide on when should we mutate a
    population of networks.
   
 The second problem is relatively easier to resolve. There are numerous
