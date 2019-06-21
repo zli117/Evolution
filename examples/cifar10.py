@@ -18,7 +18,7 @@ from evolution.encoding.fixed_edge import FixedEdge
 from evolution.encoding.mutable_edge import MutableEdge
 from evolution.evolve.evolve_strategy import aging_evolution
 from evolution.evolve.mutation_strategy import MutateOneLayer
-from evolution.train.model import Trainer
+from evolution.train.model import ParallelTrainer
 
 batch_size = 32
 num_classes = 10
@@ -72,7 +72,7 @@ class TopLayer(FixedEdge):
         return keras.layers.Activation('softmax')(logit)
 
 
-class Cifar10Trainer(Trainer):
+class Cifar10ParallelTrainer(ParallelTrainer):
 
     def __init__(self, **kwargs: Dict[str, Any]) -> None:
         super().__init__(**kwargs)
@@ -97,5 +97,5 @@ if __name__ == '__main__':
         'metrics': 'accuracy', }
     model, performance = aging_evolution(20, 10, 5, TopLayer(),
                                          MutateOneLayer(),
-                                         Cifar10Trainer(**train_eval_args))
+                                         Cifar10ParallelTrainer(**train_eval_args))
     print('Best accuracy:', performance)
