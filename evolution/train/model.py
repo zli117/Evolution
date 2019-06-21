@@ -36,11 +36,10 @@ class ParallelTrainer(BaseTrainer):
     loss: Any
     metrics: Any
 
-    def _param_generator(self, edge: Edge,
-                         name: str) -> Generator[Tuple[np.array, np.array,
-                                                      np.array, np.array, Edge,
-                                                      str],
-                                                None, None]:
+    def _param_generator(self, edge: Edge, name: str) -> Generator[
+        Tuple[np.array, np.array,
+              np.array, np.array, Edge,
+              str], None, None]:
         kf = KFold(n_splits=self.k_folds)
         for i, index in enumerate(kf.split(self.x_train)):
             train_idx, valid_idx = index
