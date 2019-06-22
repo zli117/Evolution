@@ -1,4 +1,8 @@
-from typing import Dict, Any
+import os
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+from typing import Any
 
 import tensorflow as tf
 from tensorflow import keras
@@ -74,7 +78,7 @@ class TopLayer(FixedEdge):
 
 class Cifar10ParallelTrainer(ParallelTrainer):
 
-    def __init__(self, **kwargs: Dict[str, Any]) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
     def optimizer_factory(self) -> keras.optimizers.Optimizer:
@@ -97,5 +101,6 @@ if __name__ == '__main__':
         'metrics': 'accuracy', }
     model, performance = aging_evolution(20, 10, 5, TopLayer(),
                                          MutateOneLayer(),
-                                         Cifar10ParallelTrainer(**train_eval_args))
+                                         Cifar10ParallelTrainer(
+                                             **train_eval_args))
     print('Best accuracy:', performance)
