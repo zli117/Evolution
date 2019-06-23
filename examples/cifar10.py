@@ -22,7 +22,7 @@ from evolution.encoding.fixed_edge import FixedEdge
 from evolution.encoding.mutable_edge import MutableEdge
 from evolution.evolve.evolve_strategy import aging_evolution
 from evolution.evolve.mutation_strategy import MutateOneLayer
-from evolution.train.model import ParallelTrainer
+from evolution.train.trainer import ParallelTrainer
 
 batch_size = 32
 num_classes = 10

@@ -3,12 +3,13 @@ from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
 from multiprocessing import Pool
-from typing import Dict, Any, Tuple, Generator
+from typing import Dict, Any, Tuple, Generator, List
 
 import numpy as np
 import tensorflow as tf
 from sklearn.model_selection import KFold
 from tensorflow import keras
+from tensorflow.python.client import device_lib
 
 from evolution.encoding.base import Edge
 
@@ -36,11 +37,16 @@ class ParallelTrainer(BaseTrainer):
     loss: Any
     metrics: Any
 
-    def _param_generator(self, edge: Edge, name: str) -> Generator[
-        Tuple[np.array, np.array,
-              np.array, np.array, Edge,
-              str], None, None]:
+    def _param_generator(self, edge: Edge, name: str,
+                         devices: List[Any]) -> Generator[Tuple[np.array,
+                                                                np.array,
+                                                                np.array,
+                                                                np.array,
+                                                                Edge, str],
+                                                          None, None]:
         kf = KFold(n_splits=self.k_folds)
+        total_memory = sum([device.memory_limit for device in devices])
+
         for i, index in enumerate(kf.split(self.x_train)):
             train_idx, valid_idx = index
             x_train: np.array = self.x_train[train_idx]
@@ -54,7 +60,7 @@ class ParallelTrainer(BaseTrainer):
                                    Edge, str]) -> float:
         x_train, x_valid, y_train, y_valid, edge, name = param
         gpu_options = tf.GPUOptions(
-            per_process_gpu_memory_fraction=0.5 / self.num_process)
+            per_process_gpu_memory_fraction=0.7 / self.num_process)
         with tf.Session(
                 config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
             keras.backend.set_session(sess)
@@ -81,9 +87,17 @@ class ParallelTrainer(BaseTrainer):
             return test_metrics
 
     def train_and_eval(self, edge: Edge, name: str) -> float:
+        available_devices = []
+        if tf.test.is_gpu_available():
+            local_devices = device_lib.list_local_devices()
+            available_devices = [device for device
+                                 in local_devices
+                                 if device.device_type == 'GPU']
+
         with Pool(self.num_process) as pool:
             history = list(
-                pool.map(self._worker, self._param_generator(edge, name)))
+                pool.map(self._worker,
+                         self._param_generator(edge, name, available_devices)))
             return float(np.mean(history))
 
     def optimizer_factory(self) -> keras.optimizers.Optimizer:

@@ -4,7 +4,7 @@ import numpy as np
 
 from evolution.encoding.complex_edge import ComplexEdge
 from evolution.evolve.mutation_strategy import MutationStrategy
-from evolution.train.model import BaseTrainer
+from evolution.train.trainer import BaseTrainer
 
 
 def aging_evolution(population_size: int, iterations: int, sample_size: int,
