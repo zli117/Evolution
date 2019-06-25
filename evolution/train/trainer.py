@@ -43,20 +43,22 @@ class ParallelTrainer(BaseTrainer):
                                                              np.array,
                                                              np.array,
                                                              np.array,
-                                                             Edge, str],
+                                                             Edge, str, str,
+                                                             float],
                                                        None, None]:
         kf = KFold(n_splits=self.k_folds)
         total_gpu_memory = sum([device.memory_limit for device in gpus])
-        device_allocation: List[Tuple[str, int]] = []
         if total_gpu_memory == 0:
-            device_allocation = [(device.name, 0) for device in cpus]
+            device_allocation: List[Tuple[str, float]] = [(str(device.name), 0)
+                                                          for device in cpus]
         else:
             gpu_process_count = [
                 int(self.num_process * device.memory_limit / total_gpu_memory)
                 for device in gpus]
-            device_allocation = [(device.name, 1 / count)
-                                 for device, count
-                                 in zip(gpus, gpu_process_count)]
+            device_allocation = [
+                (str(device.name), 1 / count)
+                for device, count
+                in zip(gpus, gpu_process_count)]
 
         for i, index in enumerate(kf.split(self.x_train)):
             train_idx, valid_idx = index
@@ -78,7 +80,6 @@ class ParallelTrainer(BaseTrainer):
         # with graph.device(device):
         with tf.compat.v1.Session(config=tf.compat.v1.ConfigProto(
                 gpu_options=gpu_options)) as sess:
-
             devices = sess.list_devices()
             for d in devices:
                 print(d.name)
