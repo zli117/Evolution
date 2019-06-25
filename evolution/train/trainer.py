@@ -38,14 +38,25 @@ class ParallelTrainer(BaseTrainer):
     metrics: Any
 
     def _param_generator(self, edge: Edge, name: str,
-                         devices: List[Any]) -> Generator[Tuple[np.array,
-                                                                np.array,
-                                                                np.array,
-                                                                np.array,
-                                                                Edge, str],
-                                                          None, None]:
+                         gpus: List[Any],
+                         cpus: List[Any]) -> Generator[Tuple[np.array,
+                                                             np.array,
+                                                             np.array,
+                                                             np.array,
+                                                             Edge, str],
+                                                       None, None]:
         kf = KFold(n_splits=self.k_folds)
-        total_memory = sum([device.memory_limit for device in devices])
+        total_gpu_memory = sum([device.memory_limit for device in gpus])
+        device_allocation: List[Tuple[str, int]] = []
+        if total_gpu_memory == 0:
+            device_allocation = [(device.name, 0) for device in cpus]
+        else:
+            gpu_process_count = [
+                int(self.num_process * device.memory_limit / total_gpu_memory)
+                for device in gpus]
+            device_allocation = [(device.name, 1 / count)
+                                 for device, count
+                                 in zip(gpus, gpu_process_count)]
 
         for i, index in enumerate(kf.split(self.x_train)):
             train_idx, valid_idx = index
@@ -53,20 +64,33 @@ class ParallelTrainer(BaseTrainer):
             x_valid: np.array = self.x_train[valid_idx]
             y_train: np.array = self.y_train[train_idx]
             y_valid: np.array = self.y_train[valid_idx]
+            dev_name, allocation = device_allocation[i % len(device_allocation)]
             yield (x_train, x_valid, y_train, y_valid, edge,
-                   os.path.join(os.path.join('logs', name), 'cv_%d' % i))
+                   os.path.join(os.path.join('logs', name), 'cv_%d' % i),
+                   dev_name, allocation)
 
     def _worker(self, param: Tuple[np.array, np.array, np.array, np.array,
-                                   Edge, str]) -> float:
-        x_train, x_valid, y_train, y_valid, edge, name = param
-        gpu_options = tf.GPUOptions(
-            per_process_gpu_memory_fraction=0.7 / self.num_process)
-        with tf.Session(
-                config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
-            keras.backend.set_session(sess)
+                                   Edge, str, str, float]) -> float:
+        x_train, x_valid, y_train, y_valid, edge, name, device, memory = param
+        gpu_options = tf.compat.v1.GPUOptions(
+            per_process_gpu_memory_fraction=0.7 * memory)
+        # graph = tf.Graph()
+        # with graph.device(device):
+        with tf.compat.v1.Session(config=tf.compat.v1.ConfigProto(
+                gpu_options=gpu_options)) as sess:
+
+            devices = sess.list_devices()
+            for d in devices:
+                print(d.name)
+
+            tf.compat.v1.keras.backend.set_session(sess)
+
             input_tensor = keras.Input(shape=x_train.shape[1:])
             out = edge.build(input_tensor)
             model = keras.Model(inputs=input_tensor, outputs=out)
+            model.compile(loss=self.loss,
+                          optimizer=self.optimizer_factory(),
+                          metrics=[self.metrics])
 
             tensor_board = keras.callbacks.TensorBoard(
                 batch_size=10, write_graph=True,
@@ -75,9 +99,6 @@ class ParallelTrainer(BaseTrainer):
                 on_epoch_end=lambda epoch, logs: print(
                     '%s end epoch %s' % (name, epoch)))
 
-            model.compile(loss=self.loss,
-                          optimizer=self.optimizer_factory(),
-                          metrics=[self.metrics])
             model.fit(x_train, y_train, validation_data=(x_valid, y_valid),
                       callbacks=[tensor_board, printing_callback],
                       **self.fit_args)
@@ -87,17 +108,19 @@ class ParallelTrainer(BaseTrainer):
             return test_metrics
 
     def train_and_eval(self, edge: Edge, name: str) -> float:
-        available_devices = []
-        if tf.test.is_gpu_available():
-            local_devices = device_lib.list_local_devices()
-            available_devices = [device for device
-                                 in local_devices
-                                 if device.device_type == 'GPU']
+        local_devices = device_lib.list_local_devices()
+        available_gpus = [device for device
+                          in local_devices
+                          if device.device_type == 'GPU']
+        available_cpus = [device for device
+                          in local_devices
+                          if device.device_type == 'CPU']
 
         with Pool(self.num_process) as pool:
             history = list(
                 pool.map(self._worker,
-                         self._param_generator(edge, name, available_devices)))
+                         self._param_generator(edge, name, available_gpus,
+                                               available_cpus)))
             return float(np.mean(history))
 
     def optimizer_factory(self) -> keras.optimizers.Optimizer:
