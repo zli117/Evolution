@@ -85,10 +85,6 @@ class ParallelTrainer(BaseTrainer):
         with tf.device(device):
             with tf.compat.v1.Session(config=tf.compat.v1.ConfigProto(
                     gpu_options=gpu_options)) as sess:
-                devices = sess.list_devices()
-                for d in devices:
-                    print(d.name)
-
                 tf.compat.v1.keras.backend.set_session(sess)
 
                 input_tensor = keras.Input(shape=x_train.shape[1:])
