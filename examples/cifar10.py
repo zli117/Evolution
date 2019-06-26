@@ -1,24 +1,28 @@
 import argparse
-from typing import Optional
+import os
+from typing import Any, Optional
 
-import tensorflow as tf
-from tensorflow import keras
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-from evolution.encoding.base import BatchNorm
-from evolution.encoding.base import Dense
-from evolution.encoding.base import DepthwiseConv2D
-from evolution.encoding.base import Dropout
-from evolution.encoding.base import Flatten
-from evolution.encoding.base import IdentityOperation
-from evolution.encoding.base import MaxPool2D
-from evolution.encoding.base import PointConv2D
-from evolution.encoding.base import ReLU
-from evolution.encoding.base import SeparableConv2D
-from evolution.encoding.base import Vertex
-from evolution.encoding.fixed_edge import FixedEdge
-from evolution.encoding.mutable_edge import MutableEdge
-from evolution.evolve.evolve_strategy import aging_evolution
-from evolution.evolve.mutation_strategy import MutateOneLayer
+import tensorflow as tf  # noqa
+from tensorflow import keras  # noqa
+
+from evolution.encoding.base import BatchNorm  # noqa
+from evolution.encoding.base import Dense  # noqa
+from evolution.encoding.base import DepthwiseConv2D  # noqa
+from evolution.encoding.base import Dropout  # noqa
+from evolution.encoding.base import Flatten  # noqa
+from evolution.encoding.base import IdentityOperation  # noqa
+from evolution.encoding.base import MaxPool2D  # noqa
+from evolution.encoding.base import PointConv2D  # noqa
+from evolution.encoding.base import ReLU  # noqa
+from evolution.encoding.base import SeparableConv2D  # noqa
+from evolution.encoding.base import Vertex  # noqa
+from evolution.encoding.fixed_edge import FixedEdge  # noqa
+from evolution.encoding.mutable_edge import MutableEdge  # noqa
+from evolution.evolve.evolve_strategy import aging_evolution  # noqa
+from evolution.evolve.mutation_strategy import MutateOneLayer  # noqa
+from evolution.train.trainer import ParallelTrainer  # noqa
 
 batch_size = 32
 num_classes = 10
@@ -72,6 +76,15 @@ class TopLayer(FixedEdge):
         return keras.layers.Activation('softmax')(logit)
 
 
+class Cifar10ParallelTrainer(ParallelTrainer):
+
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+
+    def optimizer_factory(self) -> keras.optimizers.Optimizer:
+        return keras.optimizers.RMSprop(lr=1e-4, decay=1e-6)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Example for evolving a neural net on cifar10 dataset')
@@ -93,18 +106,18 @@ if __name__ == '__main__':
 
     train_eval_args = {
         'k_folds': 3,
-        'X': x_train,
-        'y': y_train,
-        'X_test': x_test,
-        'y_test': y_test,
-        'fit_args': {'batch_size': batch_size, 'epochs': epochs,
-                     'shuffle': True},
-        'optimizer_factory': lambda: keras.optimizers.RMSprop(lr=1e-4,
-                                                              decay=1e-6),
+        'num_process': 3,
+        'x_train': x_train,
+        'y_train': y_train,
+        'x_valid': x_test,
+        'y_valid': y_test,
+        'fit_args': {'batch_size': batch_size,
+                     'epochs': epochs,
+                     'shuffle': True,
+                     'verbose': 0},
         'loss': 'categorical_crossentropy',
-        'metrics': 'accuracy',
-        'log_dir': args.l,
-    }
-    model, performance = aging_evolution(args.p, args.i, args.s, TopLayer(),
-                                         MutateOneLayer(), train_eval_args)
-    print('Best accuracy:', performance)
+        'metrics': 'accuracy', }
+    model, performance = aging_evolution(20, 10, 5, TopLayer(),
+                                         MutateOneLayer(),
+                                         Cifar10ParallelTrainer(
+                                             **train_eval_args))
