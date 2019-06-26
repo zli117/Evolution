@@ -1,8 +1,9 @@
+import argparse
 import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-from typing import Any
+from typing import Any, Optional
 
 import tensorflow as tf
 from tensorflow import keras
@@ -86,6 +87,24 @@ class Cifar10ParallelTrainer(ParallelTrainer):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='Example for evolving a neural net on cifar10 dataset')
+    parser.add_argument('-p', type=int, default=20, help='Population size')
+    parser.add_argument('-i', type=int, default=10,
+                        help='Number of evolution iterations')
+    parser.add_argument('-s', type=int, default=5,
+                        help='Sample how many individuals in each iteration')
+    parser.add_argument('-o', type=str, required=True,
+                        help='Log directory path')
+
+    args: Optional[argparse.Namespace] = None
+
+    try:
+        args = parser.parse_args()
+    except argparse.ArgumentError:
+        parser.print_help()
+        exit(1)
+
     train_eval_args = {
         'k_folds': 3,
         'num_process': 3,
@@ -103,4 +122,3 @@ if __name__ == '__main__':
                                          MutateOneLayer(),
                                          Cifar10ParallelTrainer(
                                              **train_eval_args))
-    print('Best accuracy:', performance)
