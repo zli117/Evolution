@@ -1,29 +1,28 @@
 import argparse
 import os
+from typing import Any, Optional
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-from typing import Any, Optional
+import tensorflow as tf  # noqa
+from tensorflow import keras  # noqa
 
-import tensorflow as tf
-from tensorflow import keras
-
-from evolution.encoding.base import BatchNorm
-from evolution.encoding.base import Dense
-from evolution.encoding.base import DepthwiseConv2D
-from evolution.encoding.base import Dropout
-from evolution.encoding.base import Flatten
-from evolution.encoding.base import IdentityOperation
-from evolution.encoding.base import MaxPool2D
-from evolution.encoding.base import PointConv2D
-from evolution.encoding.base import ReLU
-from evolution.encoding.base import SeparableConv2D
-from evolution.encoding.base import Vertex
-from evolution.encoding.fixed_edge import FixedEdge
-from evolution.encoding.mutable_edge import MutableEdge
-from evolution.evolve.evolve_strategy import aging_evolution
-from evolution.evolve.mutation_strategy import MutateOneLayer
-from evolution.train.trainer import ParallelTrainer
+from evolution.encoding.base import BatchNorm  # noqa
+from evolution.encoding.base import Dense  # noqa
+from evolution.encoding.base import DepthwiseConv2D  # noqa
+from evolution.encoding.base import Dropout  # noqa
+from evolution.encoding.base import Flatten  # noqa
+from evolution.encoding.base import IdentityOperation  # noqa
+from evolution.encoding.base import MaxPool2D  # noqa
+from evolution.encoding.base import PointConv2D  # noqa
+from evolution.encoding.base import ReLU  # noqa
+from evolution.encoding.base import SeparableConv2D  # noqa
+from evolution.encoding.base import Vertex  # noqa
+from evolution.encoding.fixed_edge import FixedEdge  # noqa
+from evolution.encoding.mutable_edge import MutableEdge  # noqa
+from evolution.evolve.evolve_strategy import aging_evolution  # noqa
+from evolution.evolve.mutation_strategy import MutateOneLayer  # noqa
+from evolution.train.trainer import ParallelTrainer  # noqa
 
 batch_size = 32
 num_classes = 10
