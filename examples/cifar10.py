@@ -116,8 +116,9 @@ if __name__ == '__main__':
                      'shuffle': True,
                      'verbose': 0},
         'loss': 'categorical_crossentropy',
-        'metrics': 'accuracy', }
-    model, performance = aging_evolution(20, 10, 5, TopLayer(),
+        'metrics': 'accuracy',
+        'log_dir': args.o}
+    model, performance = aging_evolution(args.p, args.i, args.s, TopLayer(),
                                          MutateOneLayer(),
                                          Cifar10ParallelTrainer(
                                              **train_eval_args))

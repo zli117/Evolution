@@ -41,6 +41,7 @@ class ParallelTrainer(BaseTrainer):
     fit_args: Dict[str, Any]
     loss: Any
     metrics: Any
+    log_dir: str
 
     def _param_generator(self, edge: Edge, name: str,
                          gpus: List[Any],
