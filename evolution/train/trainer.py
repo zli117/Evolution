@@ -2,7 +2,10 @@ import os
 from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
-from multiprocessing import Pool, Manager, Process
+from multiprocessing import Manager
+from multiprocessing import Pool
+from multiprocessing import Process
+from queue import Queue
 from typing import Dict, Any, Tuple, Generator, List
 
 import numpy as np
@@ -17,19 +20,14 @@ from evolution.train.progress_observer import ProgressObserver
 
 class BaseTrainer(ABC):
 
-    def __init__(self) -> None:
-        self.observers: List[ProgressObserver] = []
-
     @abstractmethod
-    def train_and_eval(self, higher_level_model: Edge, name: str) -> float:
+    def train_and_eval(self, higher_level_model: Edge, name: str,
+                       observers: Tuple[ProgressObserver] = ()) -> float:
         pass
 
     @abstractmethod
     def optimizer_factory(self) -> keras.optimizers.Optimizer:
         pass
-
-    def add_observer(self, observer: ProgressObserver) -> None:
-        self.observers.append(observer)
 
 
 # Since Tensorflow will allocate more memory than specified in
@@ -49,6 +47,7 @@ class Params(object):
     device: str
     memory_fraction: float
     name: str
+    progress_queue: Queue
 
 
 @dataclass
@@ -67,15 +66,27 @@ class ParallelTrainer(BaseTrainer):
     def __post_init__(self) -> None:
         super().__init__()
 
-    def _param_generator(self, edge: Edge, name: str,
-                         gpus: List[Any],
-                         cpus: List[Any]) -> Generator[Tuple[np.array,
-                                                             np.array,
-                                                             np.array,
-                                                             np.array,
-                                                             Edge, str, str,
-                                                             float],
-                                                       None, None]:
+    @staticmethod
+    def _get_device_info_worker(devices: List[Any]) -> None:
+        devices.extend(device_lib.list_local_devices())
+
+    def _get_device_info(self) -> List[Any]:
+        manager = Manager()
+        devices: List[Any] = manager.list()
+
+        # Since this is a CUDA call, if done in parent process will hang the
+        # sub-processes. Fix is to run CUDA call in a separate process. See:
+        # https://github.com/tensorflow/tensorflow/issues/8220
+        process = Process(target=self._get_device_info_worker,
+                          args=(devices,))
+        process.start()
+        process.join()
+
+        return devices
+
+    def _param_generator(self, edge: Edge, name: str, gpus: List[Any],
+                         cpus: List[Any],
+                         queue: Queue) -> Generator[Params, None, None]:
         kf = KFold(n_splits=self.k_folds)
         total_gpu_memory = sum([device.memory_limit for device in gpus])
         if total_gpu_memory == 0:
@@ -102,7 +113,8 @@ class ParallelTrainer(BaseTrainer):
                          y_valid=y_valid, edge=edge, cv_idx=i,
                          log_dir=os.path.join(os.path.join(self.log_dir, name),
                                               'cv_%d' % i), device=dev_name,
-                         memory_fraction=allocation, name=name)
+                         memory_fraction=allocation, name=name,
+                         progress_queue=queue)
 
     def _worker(self, params: Params) -> float:
         gpu_options = tf.compat.v1.GPUOptions(
@@ -122,42 +134,21 @@ class ParallelTrainer(BaseTrainer):
                 tensor_board = keras.callbacks.TensorBoard(
                     batch_size=10, write_graph=True,
                     log_dir=params.log_dir)
-                printing_callback = keras.callbacks.LambdaCallback(
-                    on_epoch_end=lambda epoch, logs: self._call_observers(
-                        params.name, epoch, params.cv_idx))
+                progress_callback = keras.callbacks.LambdaCallback(
+                    on_epoch_end=lambda epoch, logs: params.progress_queue.put((
+                        params.name, epoch, params.cv_idx)))
 
                 model.fit(params.x_train, params.y_train,
                           validation_data=(params.x_valid, params.y_valid),
-                          callbacks=[tensor_board, printing_callback],
+                          callbacks=[tensor_board, progress_callback],
                           **self.fit_args)
 
                 _, test_metrics = model.evaluate(self.x_valid, self.y_valid,
                                                  verbose=1)
                 return test_metrics
 
-    def _call_observers(self, name: str, epoch: int, cv_idx: int) -> None:
-        for observer in self.observers:
-            observer.on_progress(name, cv_idx, epoch, self.k_folds)
-
-    @staticmethod
-    def _get_device_info_worker(devices: List[Any]) -> None:
-        devices.extend(device_lib.list_local_devices())
-
-    def _get_device_info(self) -> List[Any]:
-        manager = Manager()
-        devices: List[Any] = manager.list()
-
-        # Since this is a CUDA call, if done in parent process will hang the
-        # sub-processes. Fix is to run CUDA call in a separate process. See:
-        # https://github.com/tensorflow/tensorflow/issues/8220
-        process = Process(target=self._get_device_info_worker,
-                          args=(devices,))
-        process.start()
-        process.join()
-
-        return devices
-
-    def train_and_eval(self, edge: Edge, name: str) -> float:
+    def _run_train_pool(self, edge: Edge, name: str,
+                        history: List[float], progress_queue: Queue) -> None:
         devices = self._get_device_info()
 
         available_gpus = [device for device
@@ -168,11 +159,26 @@ class ParallelTrainer(BaseTrainer):
                           if device.device_type == 'CPU']
 
         with Pool(self.num_process) as pool:
-            history = list(
-                pool.map(self._worker,
-                         self._param_generator(edge, name, available_gpus,
-                                               available_cpus)))
-            return float(np.mean(history))
+            history.extend(pool.map(self._worker,
+                                    self._param_generator(edge, name,
+                                                          available_gpus,
+                                                          available_cpus,
+                                                          progress_queue)))
+        progress_queue.put(None)
+
+    def train_and_eval(self, edge: Edge, name: str,
+                       observers: Tuple[ProgressObserver] = ()) -> float:
+        manager = Manager()
+        history: List[float] = manager.list()
+        queue: Queue = manager.Queue()
+        process = Process(target=self._run_train_pool,
+                          args=(edge, name, history, queue))
+        process.start()
+        for name, epoch, cv_idx in iter(queue.get, None):
+            for observer in observers:
+                observer.on_progress(name, cv_idx, epoch, self.k_folds)
+        process.join()
+        return sum(history) / len(history)
 
     def optimizer_factory(self) -> keras.optimizers.Optimizer:
         return keras.optimizers.Adam()
