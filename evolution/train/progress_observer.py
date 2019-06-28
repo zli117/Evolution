@@ -5,5 +5,5 @@ class ProgressObserver(ABC):
 
     @abstractmethod
     def on_progress(self, name: str, cv_idx: int, epoch_idx: int,
-                    total_cv: int) -> None:
+                    total_cv: int, total_epoch: int) -> None:
         pass

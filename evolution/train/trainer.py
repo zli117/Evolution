@@ -22,7 +22,7 @@ class BaseTrainer(ABC):
 
     @abstractmethod
     def train_and_eval(self, higher_level_model: Edge, name: str,
-                       observers: Tuple[ProgressObserver] = ()) -> float:
+                       observers: Tuple[ProgressObserver, ...] = ()) -> float:
         pass
 
     @abstractmethod
@@ -47,7 +47,7 @@ class Params(object):
     device: str
     memory_fraction: float
     name: str
-    progress_queue: Queue
+    progress_queue: 'Queue[Tuple[str, int, int, int]]'
 
 
 @dataclass
@@ -134,9 +134,12 @@ class ParallelTrainer(BaseTrainer):
                 tensor_board = keras.callbacks.TensorBoard(
                     batch_size=10, write_graph=True,
                     log_dir=params.log_dir)
+
+                total_epochs = self.fit_args.get('epochs', 1)
+
                 progress_callback = keras.callbacks.LambdaCallback(
-                    on_epoch_end=lambda epoch, logs: params.progress_queue.put((
-                        params.name, epoch, params.cv_idx)))
+                    on_epoch_end=lambda epoch, logs: params.progress_queue.put(
+                        (params.name, epoch, params.cv_idx, total_epochs)))
 
                 model.fit(params.x_train, params.y_train,
                           validation_data=(params.x_valid, params.y_valid),
@@ -144,7 +147,7 @@ class ParallelTrainer(BaseTrainer):
                           **self.fit_args)
 
                 _, test_metrics = model.evaluate(self.x_valid, self.y_valid,
-                                                 verbose=1)
+                                                 verbose=0)
                 return test_metrics
 
     def _run_train_pool(self, edge: Edge, name: str,
@@ -167,16 +170,17 @@ class ParallelTrainer(BaseTrainer):
         progress_queue.put(None)
 
     def train_and_eval(self, edge: Edge, name: str,
-                       observers: Tuple[ProgressObserver] = ()) -> float:
+                       observers: Tuple[ProgressObserver, ...] = ()) -> float:
         manager = Manager()
         history: List[float] = manager.list()
         queue: Queue = manager.Queue()
         process = Process(target=self._run_train_pool,
                           args=(edge, name, history, queue))
         process.start()
-        for name, epoch, cv_idx in iter(queue.get, None):
+        for name, epoch, cv_idx, total_epoch in iter(queue.get, None):
             for observer in observers:
-                observer.on_progress(name, cv_idx, epoch, self.k_folds)
+                observer.on_progress(name, cv_idx, epoch, self.k_folds,
+                                     total_epoch)
         process.join()
         return sum(history) / len(history)
 
