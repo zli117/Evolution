@@ -3,19 +3,22 @@ from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
 from multiprocessing import Pool, Manager, Process
-from typing import Dict, Any, Tuple, Generator, List, NamedTuple
+from typing import Dict, Any, Tuple, Generator, List
 
 import numpy as np
 import tensorflow as tf
 from sklearn.model_selection import KFold
 from tensorflow import keras
 from tensorflow.python.client import device_lib
-from tqdm import tqdm
 
 from evolution.encoding.base import Edge
+from evolution.train.progress_observer import ProgressObserver
 
 
 class BaseTrainer(ABC):
+
+    def __init__(self) -> None:
+        self.observers: List[ProgressObserver] = []
 
     @abstractmethod
     def train_and_eval(self, higher_level_model: Edge, name: str) -> float:
@@ -25,13 +28,17 @@ class BaseTrainer(ABC):
     def optimizer_factory(self) -> keras.optimizers.Optimizer:
         pass
 
+    def add_observer(self, observer: ProgressObserver) -> None:
+        self.observers.append(observer)
+
 
 # Since Tensorflow will allocate more memory than specified in
 # per_process_gpu_memory_fraction, we need to shrink the allocation fraction.
 MEMORY_SHRINK_FACTOR = 0.65
 
 
-class Params(NamedTuple):
+@dataclass
+class Params(object):
     x_train: np.array
     x_valid: np.array
     y_train: np.array
@@ -41,6 +48,7 @@ class Params(NamedTuple):
     log_dir: str
     device: str
     memory_fraction: float
+    name: str
 
 
 @dataclass
@@ -55,6 +63,9 @@ class ParallelTrainer(BaseTrainer):
     loss: Any
     metrics: Any
     log_dir: str
+
+    def __post_init__(self) -> None:
+        super().__init__()
 
     def _param_generator(self, edge: Edge, name: str,
                          gpus: List[Any],
@@ -91,7 +102,7 @@ class ParallelTrainer(BaseTrainer):
                          y_valid=y_valid, edge=edge, cv_idx=i,
                          log_dir=os.path.join(os.path.join(self.log_dir, name),
                                               'cv_%d' % i), device=dev_name,
-                         memory_fraction=allocation)
+                         memory_fraction=allocation, name=name)
 
     def _worker(self, params: Params) -> float:
         gpu_options = tf.compat.v1.GPUOptions(
@@ -112,8 +123,8 @@ class ParallelTrainer(BaseTrainer):
                     batch_size=10, write_graph=True,
                     log_dir=params.log_dir)
                 printing_callback = keras.callbacks.LambdaCallback(
-                    on_epoch_end=lambda epoch, logs: tqdm.write(
-                        '%s end epoch %s' % (params.log_dir, epoch)))
+                    on_epoch_end=lambda epoch, logs: self._call_observers(
+                        params.name, epoch, params.cv_idx))
 
                 model.fit(params.x_train, params.y_train,
                           validation_data=(params.x_valid, params.y_valid),
@@ -123,6 +134,10 @@ class ParallelTrainer(BaseTrainer):
                 _, test_metrics = model.evaluate(self.x_valid, self.y_valid,
                                                  verbose=1)
                 return test_metrics
+
+    def _call_observers(self, name: str, epoch: int, cv_idx: int) -> None:
+        for observer in self.observers:
+            observer.on_progress(name, cv_idx, epoch, self.k_folds)
 
     @staticmethod
     def _get_device_info_worker(devices: List[Any]) -> None:
