@@ -2,6 +2,7 @@ import argparse
 import os
 from typing import Any, Optional
 
+# Mute Tensorflow logs
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 import tensorflow as tf  # noqa
@@ -20,7 +21,7 @@ from evolution.encoding.base import SeparableConv2D  # noqa
 from evolution.encoding.base import Vertex  # noqa
 from evolution.encoding.fixed_edge import FixedEdge  # noqa
 from evolution.encoding.mutable_edge import MutableEdge  # noqa
-from evolution.evolve.evolve_strategy import aging_evolution  # noqa
+from evolution.evolve.evolve_strategy import AgingEvolution  # noqa
 from evolution.evolve.mutation_strategy import MutateOneLayer  # noqa
 from evolution.train.trainer import ParallelTrainer  # noqa
 
@@ -29,9 +30,6 @@ num_classes = 10
 epochs = 20
 
 (x_train, y_train), (x_test, y_test) = keras.datasets.cifar10.load_data()
-print('x_train shape:', x_train.shape)
-print(x_train.shape[0], 'train samples')
-print(x_test.shape[0], 'test samples')
 
 y_train = keras.utils.to_categorical(y_train, num_classes)
 y_test = keras.utils.to_categorical(y_test, num_classes)
@@ -116,8 +114,9 @@ if __name__ == '__main__':
                      'shuffle': True,
                      'verbose': 0},
         'loss': 'categorical_crossentropy',
-        'metrics': 'accuracy', }
-    model, performance = aging_evolution(20, 10, 5, TopLayer(),
-                                         MutateOneLayer(),
-                                         Cifar10ParallelTrainer(
-                                             **train_eval_args))
+        'metrics': 'accuracy',
+        'log_dir': args.o}
+    aging_evolution = AgingEvolution(args.p, args.i, args.s, TopLayer(),
+                                     MutateOneLayer(),
+                                     Cifar10ParallelTrainer(**train_eval_args))
+    model, performance = aging_evolution.run()
