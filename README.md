@@ -8,8 +8,7 @@ Evolve a neural net from scratch
   - [X] Has a flexible way to define the constraints
   - [X] Visualization
   - [X] Interfaces has full type hint
-  - [ ] Train in parallel on multiple GPUs
-  - [ ] Load balancing
+  - [X] Train multiple sessions in parallel
   
 ## How it works
 In order to evolve a neural network, we need to solve two problems:
