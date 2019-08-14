@@ -2,6 +2,8 @@ import argparse
 import os
 from typing import Any, Optional
 
+from tqdm import tqdm
+
 # Mute Tensorflow logs
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -120,3 +122,5 @@ if __name__ == '__main__':
                                      MutateOneLayer(),
                                      Cifar10ParallelTrainer(**train_eval_args))
     model, performance = aging_evolution.run()
+
+    tqdm.write('Best model performance: %.03f' % performance)

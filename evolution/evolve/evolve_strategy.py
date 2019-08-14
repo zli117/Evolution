@@ -46,6 +46,8 @@ class AgingEvolution(EvolveStrategy, ProgressObserver):
             population.append((copy, metrics))
             history.append((copy, metrics))
 
+        tqdm.write('Finished generating populations. Now start improving them')
+
         while len(history) < self.iterations:
             sample = np.random.choice(population, size=self.sample_size)
             parent, _ = max(sample, key=lambda pair: pair[1])
