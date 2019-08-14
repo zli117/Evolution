@@ -63,7 +63,6 @@ class AgingEvolution(EvolveStrategy, ProgressObserver):
 
     def on_progress(self, name: str, cv_idx: int, epoch_idx: int,
                     total_cv: int, total_epoch: int) -> None:
-        total_progress = ((self.population_size + self.iterations)
-                          * total_cv * total_epoch)
+        total_progress = self.iterations * total_cv * total_epoch
         self.progress_bar.update(1 / total_progress * 100)
         tqdm.write('%s on cv %d ends epoch %s' % (name, cv_idx, epoch_idx))
