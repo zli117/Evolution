@@ -49,14 +49,15 @@ class AgingEvolution(EvolveStrategy, ProgressObserver):
         tqdm.write('Finished generating populations. Now start improving them')
 
         while len(history) < self.iterations:
-            sample = np.random.choice(population, size=self.sample_size)
-            parent, _ = max(sample, key=lambda pair: pair[1])
+            sample = np.random.choice(len(population), size=self.sample_size)
+            idx_max = max(sample, key=lambda idx: population[idx][1])
+            parent = population[idx_max][0]
             child: ComplexEdge = cast(ComplexEdge, parent.deep_copy())
             self.mutation_strategy(child)
-            child_metrics = self.trainer.train_and_eval(
+            metrics = self.trainer.train_and_eval(
                 child, name='gen_%d' % len(history), observers=(self,))
-            population.append((child, child_metrics))
-            history.append((child, child_metrics))
+            population.append((child, metrics))
+            history.append((child, metrics))
             population.pop(0)
 
         self.progress_bar.close()
