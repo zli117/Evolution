@@ -28,7 +28,7 @@ class AgingEvolution(EvolveStrategy, ProgressObserver):
     trainer: BaseTrainer
 
     def __post_init__(self) -> None:
-        fmt = '{l_bar}{bar}[{elapsed}<{remaining}, {rate_fmt}{postfix} ]'
+        fmt = '{l_bar}{bar}[{elapsed}, eta: {remaining}, {rate_fmt}{postfix} ]'
         self.progress_bar = tqdm(total=100, bar_format=fmt)
 
     def run(self) -> Tuple[ComplexEdge, float]:
@@ -48,11 +48,7 @@ class AgingEvolution(EvolveStrategy, ProgressObserver):
 
         while len(history) < self.iterations:
             sample = np.random.choice(population, size=self.sample_size)
-            max_metrics = 0.0
-            parent: ComplexEdge = sample[0][0]
-            for edge, metrics in sample:
-                if metrics > max_metrics:
-                    parent = edge
+            parent, _ = max(sample, key=lambda pair: pair[1])
             child: ComplexEdge = cast(ComplexEdge, parent.deep_copy())
             self.mutation_strategy(child)
             child_metrics = self.trainer.train_and_eval(

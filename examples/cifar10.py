@@ -87,7 +87,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Example for evolving a neural net on cifar10 dataset')
     parser.add_argument('-p', type=int, default=20, help='Population size')
-    parser.add_argument('-i', type=int, default=10,
+    parser.add_argument('-i', type=int, default=30,
                         help='Number of evolution iterations')
     parser.add_argument('-s', type=int, default=5,
                         help='Sample how many individuals in each iteration')
