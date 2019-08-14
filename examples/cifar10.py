@@ -2,6 +2,8 @@ import argparse
 import os
 from typing import Any, Optional
 
+from tqdm import tqdm
+
 # Mute Tensorflow logs
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -87,7 +89,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Example for evolving a neural net on cifar10 dataset')
     parser.add_argument('-p', type=int, default=20, help='Population size')
-    parser.add_argument('-i', type=int, default=10,
+    parser.add_argument('-i', type=int, default=30,
                         help='Number of evolution iterations')
     parser.add_argument('-s', type=int, default=5,
                         help='Sample how many individuals in each iteration')
@@ -120,3 +122,5 @@ if __name__ == '__main__':
                                      MutateOneLayer(),
                                      Cifar10ParallelTrainer(**train_eval_args))
     model, performance = aging_evolution.run()
+
+    tqdm.write('Best model performance: %.03f' % performance)

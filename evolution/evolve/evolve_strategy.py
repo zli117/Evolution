@@ -28,7 +28,7 @@ class AgingEvolution(EvolveStrategy, ProgressObserver):
     trainer: BaseTrainer
 
     def __post_init__(self) -> None:
-        fmt = '{l_bar}{bar}[{elapsed}<{remaining}, {rate_fmt}{postfix} ]'
+        fmt = '{l_bar}{bar}[{elapsed}, eta: {remaining}, {rate_fmt}{postfix} ]'
         self.progress_bar = tqdm(total=100, bar_format=fmt)
 
     def run(self) -> Tuple[ComplexEdge, float]:
@@ -46,19 +46,18 @@ class AgingEvolution(EvolveStrategy, ProgressObserver):
             population.append((copy, metrics))
             history.append((copy, metrics))
 
+        tqdm.write('Finished generating populations. Now start improving them')
+
         while len(history) < self.iterations:
-            sample = np.random.choice(population, size=self.sample_size)
-            max_metrics = 0.0
-            parent: ComplexEdge = sample[0][0]
-            for edge, metrics in sample:
-                if metrics > max_metrics:
-                    parent = edge
+            sample = np.random.choice(len(population), size=self.sample_size)
+            idx_max = max(sample, key=lambda idx: population[idx][1])
+            parent = population[idx_max][0]
             child: ComplexEdge = cast(ComplexEdge, parent.deep_copy())
             self.mutation_strategy(child)
-            child_metrics = self.trainer.train_and_eval(
+            metrics = self.trainer.train_and_eval(
                 child, name='gen_%d' % len(history), observers=(self,))
-            population.append((child, child_metrics))
-            history.append((child, child_metrics))
+            population.append((child, metrics))
+            history.append((child, metrics))
             population.pop(0)
 
         self.progress_bar.close()
@@ -67,7 +66,6 @@ class AgingEvolution(EvolveStrategy, ProgressObserver):
 
     def on_progress(self, name: str, cv_idx: int, epoch_idx: int,
                     total_cv: int, total_epoch: int) -> None:
-        total_progress = ((self.population_size + self.iterations)
-                          * total_cv * total_epoch)
+        total_progress = self.iterations * total_cv * total_epoch
         self.progress_bar.update(1 / total_progress * 100)
         tqdm.write('%s on cv %d ends epoch %s' % (name, cv_idx, epoch_idx))
