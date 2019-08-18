@@ -7,7 +7,7 @@ Evolve a neural net from scratch
   - [X] Supports Keras
   - [X] Has a flexible way to define the constraints
   - [X] Visualization
-  - [X] Interfaces has full type hint
+  - [X] Interface has full type hint
   - [X] Train multiple sessions in parallel
   
 ## How it works
